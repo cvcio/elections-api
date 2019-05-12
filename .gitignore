@@ -39,3 +39,5 @@ conf/*.conf
 data/*
 .realize.yaml
 _tools/
+
+.pem
