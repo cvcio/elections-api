@@ -1,0 +1,71 @@
+settings:
+  legacy:
+    force: false
+    interval: 0s
+server:
+  status: false
+  open: false
+  port: 5001
+  host: localhost
+schema:
+- name: socialtrack
+  path: services/socialtrack
+  env:
+    LOG_LEVEL: "debug"
+    ENV: development
+    HASH: xxx
+    DOMAIN_NAME: mediawatch.io
+
+    HOST: localhost
+    PORT: 8000
+    READ_TIMEOUT: 10s
+    WRITE_TIMEOUT: 20s
+    SHUTDOWN_TIMEOUT: 10s
+    DEBUG: true
+
+    TWITTER_CONSUMER_KEY: xxx
+    TWITTER_CONSUMER_SECRET: xxx
+    TWITTER_ACCESS_TOKEN: xxx
+    TWITTER_ACCESS_TOKEN_SECRET: xxx
+
+    SVC_SCRAPE: 127.0.0.1:50050
+
+    MONGO_HOST: localhost
+    MONGO_PORT: 27017
+    MONGO_PATH: plagiarism
+    MONGO_USER: ""
+    MONGO_PASS: ""
+
+    ES_HOST: localhost
+    ES_PORT: 9200
+    ES_USER: ""
+    ES_PASS: ""
+
+    NEO_URL: xxx
+
+    SMTP_SERVER: smtp.mediawatch.io
+    SMTP_PORT: 587
+    SMTP_USER: no-reply@mediawatch.io
+    SMTP_PASS: xxx
+    SMTP_REPLY: press@mediawatch.io
+
+    TWILIO_SID: xxx
+    TWILIO_TOKEN: xxx
+
+    GOOGLE_AUTH_CLIENT_ID: xxx
+    GOOGLE_AUTH_CLIENT_SECRET: xxx
+    GOOGLE_AUTH_CB_URL: http://localhost:8000/api/auth/google/callback
+    CLIENT_AUTH_CB_URL: http://localhost:3000/auth/login
+
+  commands:
+    run:
+        status: true
+  watcher:
+    paths:
+    - ../../
+    extensions:
+    - go
+    ignored_paths:
+    - .git
+    - .realize
+    - vendor

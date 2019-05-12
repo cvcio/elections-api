@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package elections.mediawatch.io;
+
+message Session {
+    string id = 1;
+    string type = 2;
+}
+
+message Message {
+    string tweet = 1;
+    Session session = 2;
+}
+
+service Twitter {
+    rpc Connect(Session) returns (Session) {}
+    rpc Stream(stream Message) returns (stream Message) {}
+}
