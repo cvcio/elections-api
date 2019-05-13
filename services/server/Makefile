@@ -2,6 +2,9 @@ VERSION ?= $(shell git describe --tags --always --dirty --match=v* 2> /dev/null 
 BLDVER = module:$(MODULE),version:$(VERSION),build:$(shell date +"%Y%m%d.%H%M%S.%N.%z")
 BASE = $(CURDIR)
 MODULE = server
+REGISTRY=reg.plagiari.sm
+PROJECT=elections-api
+ORG=cvcio
 
 .PHONY: all $(MODULE)
 all: version $(MODULE)
@@ -23,7 +26,7 @@ docker:
 
 deploy:
 	@chmod +x $(BASE)/services/server/deploy.sh
-	NAME=$(MODULE) $(BASE)/services/server/deploy.sh
+	NAME=$(MODULE) REPO=$(REGISTRY) ORG=${ORG} PROJECT=$(PROJECT) $(BASE)/services/server/deploy.sh
 
 .PHONY: clean version list
 clean:
@@ -35,4 +38,4 @@ version:
 	@echo "Version: $(VERSION)"
 
 list:
-@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' | xargs
+	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' | xargs

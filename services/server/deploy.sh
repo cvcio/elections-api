@@ -5,7 +5,9 @@ echo "Running '$0' for '${NAME}'"
 ### The following section will push your container image to ECR. The `$NAME` variable is provided from our
 ### Makefile under 'deploy:' rule, which is set to the name of the component/module/service.
 ###
-# docker tag ${NAME}:${CIRCLE_SHA1} 963826138034.dkr.ecr.ap-northeast-1.amazonaws.com/${NAME}:${CIRCLE_SHA1}
+docker tag ${NAME}:${CIRCLE_SHA1} ${REPO}/${ORG}/${PROJECT}:${CIRCLE_SHA1}
+docker login -u="$DOCKER_USER" -p="$DOCKER_PASS" ${REPO}
+docker push ${REPO}/${ORG}/${PROJECT}:${CIRCLE_SHA1}
 # docker images
 # `aws ecr get-login --no-include-email --region ap-northeast-1`
 # docker push 963826138034.dkr.ecr.ap-northeast-1.amazonaws.com/${NAME}:${CIRCLE_SHA1}
