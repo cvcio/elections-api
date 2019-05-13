@@ -5,7 +5,7 @@ ARG version
 RUN apk add --update --no-cache ca-certificates git
 
 # Create and use a directory where our project will be build
-RUN mkdir /go/src/github.com/cvcio/elections-api/
+RUN mkdir -p /go/src/github.com/cvcio/elections-api/
 WORKDIR /go/src/github.com/cvcio/elections-api/
 
 # COPY go.mod and go.sum files to the workspace
