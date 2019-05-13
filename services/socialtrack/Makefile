@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty --match=v* 2> /dev/null || cat $(CURDIR)/.version 2> /dev/null || echo v0)
 BLDVER = module:$(MODULE),version:$(VERSION),build:$(shell date +"%Y%m%d.%H%M%S.%N.%z")
 BASE = $(CURDIR)
-MODULE = server
+MODULE = socialtrack
 REGISTRY=reg.plagiari.sm
 PROJECT=elections-api
 ORG=cvcio
