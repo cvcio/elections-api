@@ -16,7 +16,6 @@ COPY go.sum /go/src/github.com/cvcio/elections-api/
 RUN go mod download
 
 # COPY the source code 
-COPY go.* /go/src/github.com/cvcio/elections-api/
 COPY pkg/ /go/src/github.com/cvcio/elections-api/pkg/
 COPY vendor/ /go/src/github.com/cvcio/elections-api/vendor/
 COPY proto/ /go/src/github.com/cvcio/elections-api/proto/
