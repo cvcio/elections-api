@@ -6,8 +6,15 @@ echo "Running '$0' for '${NAME}'"
 ### Makefile under 'deploy:' rule, which is set to the name of the component/module/service.
 ###
 docker tag ${NAME}:${CIRCLE_SHA1} ${REPO}/${ORG}/${PROJECT}:${CIRCLE_SHA1}
+docker tag ${NAME}:${CIRCLE_SHA1} ${REPO}/${ORG}/${PROJECT}:${CIRCLE_BRANCH}
 docker login -u="$DOCKER_USER" -p="$DOCKER_PASS" ${REPO}
 docker push ${REPO}/${ORG}/${PROJECT}:${CIRCLE_SHA1}
+docker push ${REPO}/${ORG}/${PROJECT}:${CIRCLE_BRANCH}
+if [ "$CIRCLE_BRANCH" = "master" ]
+  then
+  docker tag ${NAME}:${CIRCLE_SHA1} ${REPO}/${ORG}/${PROJECT}:latest
+  docker push ${REPO}/${ORG}/${PROJECT}:latest
+fi
 # docker images
 # `aws ecr get-login --no-include-email --region ap-northeast-1`
 # docker push 963826138034.dkr.ecr.ap-northeast-1.amazonaws.com/${NAME}:${CIRCLE_SHA1}
