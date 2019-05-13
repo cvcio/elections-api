@@ -13,7 +13,7 @@ COPY go.mod /go/src/github.com/cvcio/elections-api/
 COPY go.sum /go/src/github.com/cvcio/elections-api/
 
 # Get dependancies - will also be cached if we won't change mod/sum
-RUN go mod download
+# RUN go mod download
 
 # COPY the source code 
 COPY pkg/ /go/src/github.com/cvcio/elections-api/pkg/

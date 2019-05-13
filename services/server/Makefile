@@ -18,7 +18,10 @@ $(BASE):
 .PHONY: custom docker deploy
 
 # The rule that is called by our root Makefile during CI builds.-
-custom: docker deploy
+custom: vendor docker deploy
+
+vendor:
+	GO111MODULE=on go mod vendor
 
 docker:
 	cp $(BASE)/services/server/dockerfile.server $(BASE)/

@@ -17,5 +17,6 @@ jobs:
         command: |
           # save value stored in file to a local env var
           CIRCLE_COMPARE_URL=$(cat CIRCLE_COMPARE_URL.txt)
+          git config --global url."https://$GITHUB_TOKEN:@github.com/".insteadOf "https://github.com/"
           chmod +x ./build.sh
           ./build.sh
