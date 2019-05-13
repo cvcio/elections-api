@@ -29,7 +29,7 @@ docker:
 
 deploy:
 	@chmod +x $(BASE)/services/server/deploy.sh
-	NAME=$(MODULE) REPO=$(REGISTRY) ORG=${ORG} PROJECT=$(PROJECT) $(BASE)/services/server/deploy.sh
+	NAME=$(MODULE) REPO=$(REGISTRY) PROJECT=$(PROJECT) $(BASE)/services/server/deploy.sh
 
 .PHONY: clean version list
 clean:
