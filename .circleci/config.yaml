@@ -1,0 +1,17 @@
+version: 2
+jobs:
+  build:
+    working_directory: /go/src/github.com/cvcio/elections-api
+    docker:
+    - image: golang:1.12.5
+    steps:
+    - checkout
+    - setup_remote_docker:
+        version: 17.11.0-ce
+    - run:
+        name: build
+        shell: /bin/bash
+        command: |
+          chmod +x ./build.sh
+          ./build.sh
+
