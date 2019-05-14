@@ -40,4 +40,4 @@ data/*
 .realize.yaml
 _tools/
 
-.pem
+*.pem

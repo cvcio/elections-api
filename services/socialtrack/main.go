@@ -68,7 +68,7 @@ func main() {
 	tweetChan := make(chan anaconda.Tweet)
 
 	// start Listening the twitter stream
-	go svc.Listen(nil, []string{"Brexit"}, tweetChan)
+	go svc.Listen(nil, []string{"#Αλεξη_πες_μας", "Ευρωεκλογές2019", "Τσίπρας", "Μητσοτάκης"}, tweetChan)
 
 	// ========================================
 	// Shutdown
