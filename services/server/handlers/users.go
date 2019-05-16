@@ -12,7 +12,6 @@ import (
 	"github.com/cvcio/elections-api/pkg/mailer"
 	"github.com/gin-gonic/gin"
 	gothic "github.com/markbates/goth/gothic"
-	"github.com/plagiari-sm/mediawatch/pkg/es"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -20,7 +19,6 @@ import (
 type Users struct {
 	cfg           *config.Config
 	db            *db.DB
-	es            *es.ES
 	authenticator *auth.Authenticator
 	mail          *mailer.Mailer
 }

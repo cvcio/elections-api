@@ -9,10 +9,13 @@ import (
 	"time"
 
 	"github.com/ChimeraCoder/anaconda"
+	"github.com/cvcio/elections-api/models/nodes"
 	"github.com/cvcio/elections-api/pkg/config"
+	"github.com/cvcio/elections-api/pkg/es"
 	proto "github.com/cvcio/elections-api/pkg/proto"
 	"github.com/cvcio/elections-api/pkg/twitter"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/grpc"
@@ -29,6 +32,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("main: Error loading config: %s", err.Error())
 	}
+
+	// =========================================================================
+	// Start elasticsearch
+	log.Info("main: Initialize Elasticsearch")
+	esClient, err := es.NewElasticsearch(cfg.Elasticsearch.Host, cfg.Elasticsearch.Port, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
+	if err != nil {
+		log.Fatalf("main: Register Elasticsearch: %v", err)
+	}
+
+	log.Info("main: Connected to Elasticsearch")
 
 	// Create the gRPC Service
 	// Parse Server Options
@@ -100,49 +113,68 @@ func main() {
 		select {
 		case t := <-tweetChan:
 			log.Debugf("New Tweet: %s | %v", t.User.ScreenName, t.IdStr)
-			c := classifyNestedTweet(&t, classification)
+			c := classifyNestedTweet(esClient, &t, classification)
 			tweet, _ := json.Marshal(&c)
-			log.Info(c)
+
+			log.Infof("New Tweet From %s", t.User.ScreenName)
+
+			go SaveTweet(esClient, &t)
 			go stream.Send(&proto.Message{Session: session, Tweet: string(tweet)})
-			// Save Enriched
+
 		case <-osSignals:
 			os.Exit(1)
 		}
 	}
 }
 
-// UserObj ..
-type UserObj struct {
-	Id              int64               `json:"id"`
-	IdStr           string              `json:"id_str"`
-	CreatedAt       string              `json:"created_at"`
-	Verified        bool                `json:"verified"`
-	ScreenName      string              `json:"screen_name"`
-	Name            string              `json:"name"`
-	Description     string              `json:"description"`
-	ProfileImage    string              `json:"profile_image_url_https"`
-	BannerImage     string              `json:"profile_banner_url"`
-	UserClass       string              `json:"user_class"`
-	UserClassScore  float64             `json:"user_class_score"`
-	QuotedStatus    *UserObj            `json:"quoted_status"`
-	RetweetedStatus *UserObj            `json:"retweeted_status"`
-	Metrics         *proto.UserFeatures `json:"metrics"`
+// SaveTweet on ES Index
+func SaveTweet(esClient *elastic.Client, t *anaconda.Tweet) {
+	_, err := esClient.Index().
+		Index("mediawatch_twitter_elections_tweets").
+		Type("document").
+		Id(t.IdStr).
+		BodyJson(t).
+		Do(context.Background())
+	if err != nil {
+		log.Errorf("Can't Save Tweet: %s", err.Error())
+		return
+	}
 }
 
-func classifyNestedTweet(t *anaconda.Tweet, c proto.ClassificationClient) *UserObj {
+// SaveUser on ES Index
+func SaveUser(esClient *elastic.Client, u *nodes.ESUserObj) {
+	u.CrawledAt = time.Now().Format(time.RubyDate)
+	_, err := esClient.Index().
+		Index("mediawatch_twitter_elections_users").
+		Type("document").
+		Id(primitive.NewObjectID().Hex()).
+		BodyJson(u).
+		Do(context.Background())
+	if err != nil {
+		log.Errorf("Can't Save User: %s", err.Error())
+		return
+	}
+}
+
+func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.ClassificationClient) *nodes.UserObj {
 	var tuF, quF, ruF *proto.UserFeatures
 	var tuC, quC, ruC *proto.UserClass
 
-	user := &UserObj{
-		Id:           t.User.Id,
-		IdStr:        t.User.IdStr,
-		CreatedAt:    t.User.CreatedAt,
-		Verified:     t.User.Verified,
-		ScreenName:   t.User.ScreenName,
-		Name:         t.User.Name,
-		Description:  t.User.Description,
-		ProfileImage: t.User.ProfileImageUrlHttps,
-		BannerImage:  t.User.ProfileBannerURL,
+	user := &nodes.UserObj{
+		Id:              t.User.Id,
+		IdStr:           t.User.IdStr,
+		CreatedAt:       t.User.CreatedAt,
+		Verified:        t.User.Verified,
+		ScreenName:      t.User.ScreenName,
+		Name:            t.User.Name,
+		Description:     t.User.Description,
+		FollowersCount:  t.User.FollowersCount,
+		FriendsCount:    t.User.FriendsCount,
+		ListedCount:     t.User.ListedCount,
+		StatusesCount:   t.User.StatusesCount,
+		FavouritesCount: t.User.FavouritesCount,
+		ProfileImage:    t.User.ProfileImageUrlHttps,
+		BannerImage:     t.User.ProfileBannerURL,
 	}
 
 	// Tweet User
@@ -153,18 +185,42 @@ func classifyNestedTweet(t *anaconda.Tweet, c proto.ClassificationClient) *UserO
 	user.UserClass = tuC.GetLabel()
 	user.UserClassScore = tuC.GetScore()
 
+	go SaveUser(esClient, &nodes.ESUserObj{
+		Id:              t.User.Id,
+		IdStr:           t.User.IdStr,
+		CreatedAt:       t.User.CreatedAt,
+		Verified:        t.User.Verified,
+		ScreenName:      t.User.ScreenName,
+		Name:            t.User.Name,
+		Description:     t.User.Description,
+		FollowersCount:  t.User.FollowersCount,
+		FriendsCount:    t.User.FriendsCount,
+		ListedCount:     t.User.ListedCount,
+		StatusesCount:   t.User.StatusesCount,
+		FavouritesCount: t.User.FavouritesCount,
+		ProfileImage:    t.User.ProfileImageUrlHttps,
+		BannerImage:     t.User.ProfileBannerURL,
+		UserClass:       user.UserClass,
+		UserClassScore:  user.UserClassScore,
+	})
+
 	// Quoted User
 	if t.QuotedStatus != nil {
-		user.QuotedStatus = &UserObj{
-			Id:           t.QuotedStatus.User.Id,
-			IdStr:        t.QuotedStatus.User.IdStr,
-			CreatedAt:    t.QuotedStatus.User.CreatedAt,
-			Verified:     t.QuotedStatus.User.Verified,
-			ScreenName:   t.QuotedStatus.User.ScreenName,
-			Name:         t.QuotedStatus.User.Name,
-			Description:  t.QuotedStatus.User.Description,
-			ProfileImage: t.QuotedStatus.User.ProfileImageUrlHttps,
-			BannerImage:  t.QuotedStatus.User.ProfileBannerURL,
+		user.QuotedStatus = &nodes.UserObj{
+			Id:              t.QuotedStatus.User.Id,
+			IdStr:           t.QuotedStatus.User.IdStr,
+			CreatedAt:       t.QuotedStatus.User.CreatedAt,
+			Verified:        t.QuotedStatus.User.Verified,
+			ScreenName:      t.QuotedStatus.User.ScreenName,
+			Name:            t.QuotedStatus.User.Name,
+			Description:     t.QuotedStatus.User.Description,
+			FollowersCount:  t.QuotedStatus.User.FollowersCount,
+			FriendsCount:    t.QuotedStatus.User.FriendsCount,
+			ListedCount:     t.QuotedStatus.User.ListedCount,
+			StatusesCount:   t.QuotedStatus.User.StatusesCount,
+			FavouritesCount: t.QuotedStatus.User.FavouritesCount,
+			ProfileImage:    t.QuotedStatus.User.ProfileImageUrlHttps,
+			BannerImage:     t.QuotedStatus.User.ProfileBannerURL,
 		}
 		quF = getUserFeatures(&t.QuotedStatus.User)
 		quC, _ = c.Classify(context.Background(), quF)
@@ -172,19 +228,43 @@ func classifyNestedTweet(t *anaconda.Tweet, c proto.ClassificationClient) *UserO
 		user.QuotedStatus.Metrics = quF
 		user.QuotedStatus.UserClass = quC.GetLabel()
 		user.QuotedStatus.UserClassScore = quC.GetScore()
+
+		go SaveUser(esClient, &nodes.ESUserObj{
+			Id:              t.QuotedStatus.User.Id,
+			IdStr:           t.QuotedStatus.User.IdStr,
+			CreatedAt:       t.QuotedStatus.User.CreatedAt,
+			Verified:        t.QuotedStatus.User.Verified,
+			ScreenName:      t.QuotedStatus.User.ScreenName,
+			Name:            t.QuotedStatus.User.Name,
+			Description:     t.QuotedStatus.User.Description,
+			FollowersCount:  t.QuotedStatus.User.FollowersCount,
+			FriendsCount:    t.QuotedStatus.User.FriendsCount,
+			ListedCount:     t.QuotedStatus.User.ListedCount,
+			StatusesCount:   t.QuotedStatus.User.StatusesCount,
+			FavouritesCount: t.QuotedStatus.User.FavouritesCount,
+			ProfileImage:    t.QuotedStatus.User.ProfileImageUrlHttps,
+			BannerImage:     t.QuotedStatus.User.ProfileBannerURL,
+			UserClass:       user.QuotedStatus.UserClass,
+			UserClassScore:  user.QuotedStatus.UserClassScore,
+		})
 	}
 	// Retweeted User
 	if t.RetweetedStatus != nil {
-		user.RetweetedStatus = &UserObj{
-			Id:           t.RetweetedStatus.User.Id,
-			IdStr:        t.RetweetedStatus.User.IdStr,
-			CreatedAt:    t.RetweetedStatus.User.CreatedAt,
-			Verified:     t.RetweetedStatus.User.Verified,
-			ScreenName:   t.RetweetedStatus.User.ScreenName,
-			Name:         t.RetweetedStatus.User.Name,
-			Description:  t.RetweetedStatus.User.Description,
-			ProfileImage: t.RetweetedStatus.User.ProfileImageUrlHttps,
-			BannerImage:  t.RetweetedStatus.User.ProfileBannerURL,
+		user.RetweetedStatus = &nodes.UserObj{
+			Id:              t.RetweetedStatus.User.Id,
+			IdStr:           t.RetweetedStatus.User.IdStr,
+			CreatedAt:       t.RetweetedStatus.User.CreatedAt,
+			Verified:        t.RetweetedStatus.User.Verified,
+			ScreenName:      t.RetweetedStatus.User.ScreenName,
+			Name:            t.RetweetedStatus.User.Name,
+			Description:     t.RetweetedStatus.User.Description,
+			FollowersCount:  t.RetweetedStatus.User.FollowersCount,
+			FriendsCount:    t.RetweetedStatus.User.FriendsCount,
+			ListedCount:     t.RetweetedStatus.User.ListedCount,
+			StatusesCount:   t.RetweetedStatus.User.StatusesCount,
+			FavouritesCount: t.RetweetedStatus.User.FavouritesCount,
+			ProfileImage:    t.RetweetedStatus.User.ProfileImageUrlHttps,
+			BannerImage:     t.RetweetedStatus.User.ProfileBannerURL,
 		}
 		ruF = getUserFeatures(&t.RetweetedStatus.User)
 		ruC, _ = c.Classify(context.Background(), ruF)
@@ -192,6 +272,25 @@ func classifyNestedTweet(t *anaconda.Tweet, c proto.ClassificationClient) *UserO
 		user.RetweetedStatus.Metrics = ruF
 		user.RetweetedStatus.UserClass = ruC.GetLabel()
 		user.RetweetedStatus.UserClassScore = ruC.GetScore()
+
+		go SaveUser(esClient, &nodes.ESUserObj{
+			Id:              t.RetweetedStatus.User.Id,
+			IdStr:           t.RetweetedStatus.User.IdStr,
+			CreatedAt:       t.RetweetedStatus.User.CreatedAt,
+			Verified:        t.RetweetedStatus.User.Verified,
+			ScreenName:      t.RetweetedStatus.User.ScreenName,
+			Name:            t.RetweetedStatus.User.Name,
+			Description:     t.RetweetedStatus.User.Description,
+			FollowersCount:  t.RetweetedStatus.User.FollowersCount,
+			FriendsCount:    t.RetweetedStatus.User.FriendsCount,
+			ListedCount:     t.RetweetedStatus.User.ListedCount,
+			StatusesCount:   t.RetweetedStatus.User.StatusesCount,
+			FavouritesCount: t.RetweetedStatus.User.FavouritesCount,
+			ProfileImage:    t.RetweetedStatus.User.ProfileImageUrlHttps,
+			BannerImage:     t.RetweetedStatus.User.ProfileBannerURL,
+			UserClass:       user.RetweetedStatus.UserClass,
+			UserClassScore:  user.RetweetedStatus.UserClassScore,
+		})
 	}
 	return user
 }

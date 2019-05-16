@@ -18,7 +18,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/cvcio/elections-api/pkg/auth"
-	"github.com/plagiari-sm/mediawatch/pkg/es"
+	"github.com/cvcio/elections-api/pkg/es"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -64,20 +64,12 @@ func main() {
 	// =========================================================================
 	// Start elasticsearch
 	log.Info("main: Initialize Elasticsearch")
-	esClient, err := es.NewElastic(cfg.Elasticsearch.Host, cfg.Elasticsearch.Port, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
+	esClient, err := es.NewElasticsearch(cfg.Elasticsearch.Host, cfg.Elasticsearch.Port, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
 	if err != nil {
 		log.Fatalf("main: Register Elasticsearch: %v", err)
 	}
 
 	log.Info("main: Connected to Elasticsearch")
-
-	if cfg.Log.Dev {
-		log.Info("main: Check for elasticsearch indexes ")
-		err = es.CreateElasticIndex(esClient)
-		if err != nil {
-			log.Fatalf("main: Index in elasticsearch: %v", err)
-		}
-	}
 
 	// =========================================================================
 	// Find auth keys

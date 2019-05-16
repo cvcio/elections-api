@@ -4,12 +4,12 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
 	"github.com/cvcio/elections-api/pkg/db"
 	"github.com/cvcio/elections-api/pkg/mailer"
 	"github.com/cvcio/elections-api/pkg/middleware"
-	"github.com/cvcio/elections-api/pkg/auth"
-	"github.com/plagiari-sm/mediawatch/pkg/es"
+	"github.com/olivere/elastic"
 
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/twitter"
@@ -31,7 +31,7 @@ func Broadcast(stream proto.Twitter_StreamClient, m *melody.Melody) {
 }
 
 // API : Returns an new API
-func API(cfg *config.Config, db *db.DB, es *es.ES, authenticator *auth.Authenticator, mail *mailer.Mailer, streamer proto.TwitterClient) http.Handler {
+func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.Authenticator, mail *mailer.Mailer, streamer proto.TwitterClient) http.Handler {
 	m := melody.New()
 
 	session, err := streamer.Connect(context.Background(), &proto.Session{Id: primitive.NewObjectID().Hex(), Type: "api"})
@@ -77,9 +77,19 @@ func API(cfg *config.Config, db *db.DB, es *es.ES, authenticator *auth.Authentic
 	users := &Users{
 		cfg:           cfg,
 		db:            db,
-		es:            es,
 		authenticator: authenticator,
 		mail:          mail,
+	}
+
+	metrics := &Metrics{
+		cfg: cfg,
+		db:  db,
+		es:  es,
+	}
+
+	annotations := &Annotations{
+		cfg: cfg,
+		db:  db,
 	}
 
 	authRoutes := app.Group("/api/auth")
@@ -90,16 +100,20 @@ func API(cfg *config.Config, db *db.DB, es *es.ES, authenticator *auth.Authentic
 	app.GET("/v2/ws", func(c *gin.Context) {
 		m.HandleRequest(c.Writer, c.Request)
 	})
-	app.POST("/v2/users", users.Update)
-	app.POST("/v2/users/verify", users.Verify)
-	app.POST("/v2/users/2fa", users.SendPin)
-	app.POST("/v2/users/token", users.Token)
 
-	app.Use(authmw.Authenticate())
+	public := app.Group("/v2")
 	{
-		
+		public.POST("/users", users.Update)
+		public.POST("/users/verify", users.Verify)
+		public.POST("/users/2fa", users.SendPin)
+		public.POST("/users/token", users.Token)
+		public.GET("/metrics/user/:id/volume", metrics.GetVolumeByUser)
 	}
-
+	private := app.Group("/v2")
+	{
+		private.Use(authmw.Authenticate())
+		private.POST("/annotate", annotations.Create)
+	}
 	// Forbid Access
 	// This is usefull when you combine multiple microservices
 	app.NoRoute(func(c *gin.Context) {
