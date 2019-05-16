@@ -85,8 +85,23 @@ func NewListener(tw *anaconda.TwitterApi) *Listen {
 	return s
 }
 
+// GetUsersShow Retrieve User Information from Twitter
+func (s *Listen) GetUsersShow(username string) *anaconda.User {
+	user, err := s.TwitterAPI.GetUsersShow(username, url.Values{})
+	if err != nil {
+		return nil
+	}
+	return &user
+}
+
 // Listen start the listener and send cathed urls to chan
 func (s *Listen) Listen(ids []string, track []string, urlChan chan anaconda.Tweet) {
+	if ids != nil {
+		log.Infof("Twitter Streaming API Streaming Users: %s", ids)
+	}
+	if track != nil {
+		log.Infof("Twitter Streaming API Streaming Keywords: %s", track)
+	}
 	stream := s.TwitterAPI.PublicStreamFilter(url.Values{
 		"track":  track,
 		"follow": ids,

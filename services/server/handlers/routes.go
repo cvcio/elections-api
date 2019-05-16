@@ -8,7 +8,7 @@ import (
 	"github.com/cvcio/elections-api/pkg/db"
 	"github.com/cvcio/elections-api/pkg/mailer"
 	"github.com/cvcio/elections-api/pkg/middleware"
-	"github.com/plagiari-sm/mediawatch/pkg/auth"
+	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/plagiari-sm/mediawatch/pkg/es"
 
 	"github.com/markbates/goth"
@@ -52,6 +52,11 @@ func API(cfg *config.Config, db *db.DB, es *es.ES, authenticator *auth.Authentic
 	app.RedirectTrailingSlash = true
 	app.RedirectFixedPath = true
 
+	// authmw is used for authentication/authorization middleware.
+	authmw := middleware.Auth{
+		Authenticator: authenticator,
+	}
+
 	app.Use(middleware.Logger(log.StandardLogger(), true))
 
 	if cfg.Env == "development" {
@@ -87,6 +92,13 @@ func API(cfg *config.Config, db *db.DB, es *es.ES, authenticator *auth.Authentic
 	})
 	app.POST("/v2/users", users.Update)
 	app.POST("/v2/users/verify", users.Verify)
+	app.POST("/v2/users/2fa", users.SendPin)
+	app.POST("/v2/users/token", users.Token)
+
+	app.Use(authmw.Authenticate())
+	{
+		
+	}
 
 	// Forbid Access
 	// This is usefull when you combine multiple microservices

@@ -15,7 +15,9 @@ init:
 	mkdir pkg/proto && protocols
 
 protocols:
-	mkdir -p pkg/proto && protoc -I/usr/local/include -I. -I${GOPATH}/src --go_out=plugins=grpc:./pkg proto/twitter.proto
+	mkdir -p pkg/proto && \
+		protoc -I/usr/local/include -I. -I${GOPATH}/src --go_out=plugins=grpc:./pkg proto/twitter.proto && \
+		protoc -I/usr/local/include -I. -I${GOPATH}/src --go_out=plugins=grpc:./pkg proto/classification.proto
 
 dev:
 	realize start

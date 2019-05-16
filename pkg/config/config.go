@@ -26,8 +26,10 @@ type Config struct {
 		DomainName      string        `default:"mediawatch.io" envconfig:"DOMAIN_NAME"`
 	}
 	Streamer struct {
-		Host string `default:"localhost" envconfig:"STREAMER_HOST"`
-		Port string `default:"50050" envconfig:"STREAMER_PORT"`
+		Host   string   `default:"localhost" envconfig:"STREAMER_HOST"`
+		Port   string   `default:"50050" envconfig:"STREAMER_PORT"`
+		Follow []string `default:"" envconfig:"FOLLOW"`
+		Track  []string `default:"" envconfig:"TRACK"`
 	}
 	Twitter struct {
 		TwitterConsumerKey       string `envconfig:"TWITTER_CONSUMER_KEY" default:""`

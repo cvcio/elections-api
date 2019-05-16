@@ -3,14 +3,15 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/cvcio/elections-api/models/user"
+	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
 	"github.com/cvcio/elections-api/pkg/db"
 	"github.com/cvcio/elections-api/pkg/mailer"
 	"github.com/gin-gonic/gin"
 	gothic "github.com/markbates/goth/gothic"
-	"github.com/plagiari-sm/mediawatch/pkg/auth"
 	"github.com/plagiari-sm/mediawatch/pkg/es"
 	log "github.com/sirupsen/logrus"
 )
@@ -66,11 +67,25 @@ func (ctrl *Users) OAuthTwitterCB(c *gin.Context) {
 		// no need to check for errors
 		user.Update(ctrl.db, exists.ID.Hex(), exists)
 
+		if exists.Status == "" {
+			c.Redirect(
+				http.StatusMovedPermanently,
+				ctrl.cfg.Twitter.ClientAuthCallBack+"&method=create&twitterId="+
+					exists.UserID+"&screenName="+exists.ScreenName+"&idStr="+exists.IDStr)
+			return
+		}
+		if exists.Status == "create" {
+			c.Redirect(
+				http.StatusMovedPermanently,
+				ctrl.cfg.Twitter.ClientAuthCallBack+"&method=verify&idStr="+exists.IDStr+"&mobile="+exists.Mobile)
+			return
+		}
+
 		// TODO: redirect to home...
 		c.Redirect(
 			http.StatusMovedPermanently,
-			ctrl.cfg.Twitter.ClientAuthCallBack+"&method=cb&twitterId="+
-				exists.UserID+"&screenName="+exists.ScreenName+"&idStr="+exists.IDStr)
+			ctrl.cfg.Twitter.ClientAuthCallBack+"&method=login&twitterId="+
+				exists.UserID+"&screenName="+exists.ScreenName+"&idStr="+exists.IDStr+"&twitterAccessToken="+*exists.TwitterAccessToken)
 		return
 	}
 
@@ -81,6 +96,7 @@ func (ctrl *Users) OAuthTwitterCB(c *gin.Context) {
 	u.TwitterAccessToken = &gothUser.AccessToken
 	u.TwitterAccessTokenSecret = &gothUser.AccessTokenSecret
 	u.ProfileImageURL = &gothUser.AvatarURL
+	u.Pin = user.RandStringBytes(8)
 
 	created, err := user.Create(ctrl.db, &u)
 	if err != nil {
@@ -90,7 +106,7 @@ func (ctrl *Users) OAuthTwitterCB(c *gin.Context) {
 
 	c.Redirect(
 		http.StatusMovedPermanently,
-		ctrl.cfg.Twitter.ClientAuthCallBack+"&method=cb&twitterId="+
+		ctrl.cfg.Twitter.ClientAuthCallBack+"&method=create&twitterId="+
 			created.UserID+"&screenName="+created.ScreenName+"&idStr="+created.IDStr)
 }
 
@@ -101,7 +117,6 @@ func (ctrl *Users) Update(c *gin.Context) {
 		ResponseError(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	log.Infof("%+v", u)
 
 	_, err := user.Update(ctrl.db, u.IDStr, u)
 	if err != nil {
@@ -111,7 +126,7 @@ func (ctrl *Users) Update(c *gin.Context) {
 
 	ret, _ := user.Get(ctrl.db, u.IDStr)
 	if ret.Status == "create" {
-		user.SendOTP(ctrl.cfg.Twillio.SID, ctrl.cfg.Twillio.Token, ret.Mobile, ret.Pin)
+		go user.SendOTP(ctrl.cfg.Twillio.SID, ctrl.cfg.Twillio.Token, ret.Mobile, ret.Pin)
 	}
 	ResponseJSON(c, &ret)
 }
@@ -127,9 +142,12 @@ func (ctrl *Users) Verify(c *gin.Context) {
 		ResponseError(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	log.Infof("%+v", req)
 
-	u, _ := user.Get(ctrl.db, req.IDStr)
+	u, err := user.Get(ctrl.db, req.IDStr)
+	if err != nil {
+		ResponseError(c, 404, "Account not found")
+		return
+	}
 	if u.Pin != req.Pin {
 		ResponseError(c, 403, "Authorization code doesn't match")
 		return
@@ -137,11 +155,75 @@ func (ctrl *Users) Verify(c *gin.Context) {
 
 	u.Pin = ""
 	u.Status = "verify"
-	_, err := user.Update(ctrl.db, u.IDStr, u)
+	_, err = user.Update(ctrl.db, u.IDStr, u)
 	if err != nil {
 		ResponseError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	ResponseJSON(c, &u)
+}
+
+// SendPin Send New OTP
+func (ctrl *Users) SendPin(c *gin.Context) {
+	type Req struct {
+		IDStr string `json:"idStr"`
+	}
+	var req *Req
+	if err := c.Bind(&req); err != nil {
+		ResponseError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	u, err := user.Get(ctrl.db, req.IDStr)
+	if err != nil {
+		ResponseError(c, 404, "Account not found")
+		return
+	}
+
+	u.Pin = user.RandStringBytes(8)
+	_, err = user.Update(ctrl.db, u.IDStr, u)
+	if err != nil {
+		ResponseError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	go user.SendOTP(ctrl.cfg.Twillio.SID, ctrl.cfg.Twillio.Token, u.Mobile, u.Pin)
+
+	ResponseJSON(c, &u)
+}
+
+// Token Authorize App
+func (ctrl *Users) Token(c *gin.Context) {
+	type Req struct {
+		IDStr              string `json:"idStr"`
+		TwitterAccessToken string `json:"twitterAccessToken"`
+	}
+	var req *Req
+	if err := c.Bind(&req); err != nil {
+		ResponseError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	u, err := user.Get(ctrl.db, req.IDStr)
+	if err != nil {
+		ResponseError(c, 404, "Account not found")
+		return
+	}
+
+	if *u.TwitterAccessToken != req.TwitterAccessToken {
+		ResponseError(c, http.StatusUnauthorized, "Access Token Error")
+		return
+	}
+
+	tkn, err := user.Authenticate(ctrl.authenticator, time.Now(), u)
+	if err != nil {
+		log.Debug(err)
+		ResponseError(c, http.StatusUnauthorized, "Access Token Error")
+		return
+	}
+
+	c.Header("Authorization", tkn.Token)
 
 	ResponseJSON(c, &u)
 }

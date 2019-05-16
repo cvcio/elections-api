@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/db"
 	"github.com/pkg/errors"
-	"github.com/plagiari-sm/mediawatch/pkg/auth"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -63,55 +63,6 @@ func EnsureIndex(ctx context.Context, dbConn *db.DB) error {
 	return nil
 }
 
-// TokenGenerator is the behavior we need in our Authenticate to generate
-// tokens for authenticated users.
-type TokenGenerator interface {
-	GenerateToken(auth.Claims) (string, error)
-}
-
-// Authenticate finds a user by their email and verifies their password. On
-// success it returns a Token that can be used to authenticate in the future.
-//
-// The key, keyID, and alg are required for generating the token.
-func Authenticate(ctx context.Context, tknGen TokenGenerator, now time.Time, u *User) (Token, error) {
-	_, span := trace.StartSpan(ctx, "models.user.Authenticate")
-	defer span.End()
-
-	// q := bson.M{"email": email}
-
-	// var u *Account
-	// f := func(collection *.Collection) error {
-	// 	return collection.Find(q).One(&u)
-	// }
-
-	// if err := dbConn.Execute(ctx, accountsCollection, f); err != nil {
-
-	// 	// Normally we would return ErrNotFound in this scenario but we do not want
-	// 	// to leak to an unauthenticated user which emails are in the system.
-	// 	if err == .ErrNotFound {
-	// 		return Token{}, ErrAuthenticationFailure
-	// 	}
-	// 	return Token{}, errors.Wrap(err, fmt.Sprintf("db.accounts.find(%s)", db.Query(q)))
-	// }
-
-	// // Compare the provided password with the saved hash. Use the bcrypt
-	// // comparison function so it is cryptographically secure.
-	// if err := bcrypt.CompareHashAndPassword(u.PasswordHash, []byte(password)); err != nil {
-	// 	return Token{}, ErrAuthenticationFailure
-	// }
-
-	// If we are this far the request is valid. Create some claims for the user
-	// and generate their token.
-	claims := auth.NewClaims(u.ID.Hex(), u.Email, u.Roles, u.OrgName, now, 24*time.Hour)
-
-	tkn, err := tknGen.GenerateToken(claims)
-	if err != nil {
-		return Token{}, errors.Wrap(err, "generating token")
-	}
-
-	return Token{Token: tkn}, nil
-}
-
 // User : User Schema model
 type User struct {
 	ID                       primitive.ObjectID `bson:"_id" json:"id"`
@@ -130,7 +81,7 @@ type User struct {
 	Profession               string             `bson:"profession" json:"profession"`
 	Pin                      string             `bson:"pin" json:"-"`
 	ProfileImageURL          *string            `bson:"profileImageURL" json:"profileImageURL"`
-	TwitterAccessToken       *string            `bson:"twitterAccessToken" json:"-"`
+	TwitterAccessToken       *string            `bson:"twitterAccessToken" json:"twitterAccessToken"`
 	TwitterAccessTokenSecret *string            `bson:"twitterAccessTokenSecret" json:"-"`
 
 	OrgName      string `bson:"orgname" json:"orgname"`
@@ -205,10 +156,14 @@ func Update(dbConn *db.DB, id string, upd *User) (*User, error) {
 		fields["status"] = upd.Status
 	}
 
-	if &upd.Status != nil && upd.Status == "create" {
-		fields["pin"] = RandStringBytes(8)
+	if upd.Pin != "" {
+		fields["pin"] = upd.Pin
 	}
-
+	/*
+		if &upd.Status != nil && upd.Status == "create" {
+			fields["pin"] = RandStringBytes(8)
+		}
+	*/
 	if &upd.FirstName != nil {
 		fields["firstName"] = upd.FirstName
 	}
@@ -366,6 +321,31 @@ func SendOTP(accountSid string, authToken string, mobile string, pin string) {
 	} else {
 		fmt.Println(resp.Status)
 	}
+}
+
+// TokenGenerator is the behavior we need in our Authenticate to generate
+// tokens for authenticated users.
+type TokenGenerator interface {
+	GenerateToken(auth.Claims) (string, error)
+}
+
+// Authenticate finds a user by their email and verifies their password. On
+// success it returns a Token that can be used to authenticate in the future.
+//
+// The key, keyID, and alg are required for generating the token.
+func Authenticate(tknGen TokenGenerator, now time.Time, u *User) (Token, error) {
+	_, span := trace.StartSpan(context.Background(), "models.user.Authenticate")
+	defer span.End()
+	// If we are this far the request is valid. Create some claims for the user
+	// and generate their token.
+	claims := auth.NewClaims(u.ID.Hex(), u.Email, u.Roles, u.ScreenName, now, 72*time.Hour)
+
+	tkn, err := tknGen.GenerateToken(claims)
+	if err != nil {
+		return Token{}, errors.Wrap(err, "generating token")
+	}
+
+	return Token{Token: tkn}, nil
 }
 
 // RandStringBytes Generates Random String by length

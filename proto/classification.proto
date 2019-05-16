@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package elections.mediawatch.io;
+
+// Request message
+message UserFeatures {
+    int64 followers = 1;
+    int64 friends = 2;
+    int64 statuses = 3;
+    int64 favorites = 4;
+    int64 lists = 5;
+    double ffr = 6;
+    double stfv = 7;
+    double fstfv = 8;
+    double dates = 9;
+    double actions = 10;
+}
+
+// Response message
+message UserClass {
+    string label = 1;
+    double score = 2;
+}
+
+message Model {
+    float active = 1;
+    float bot = 2;
+    float influencer = 3;
+    float new = 4;
+    float normal = 5;
+    float other = 6;
+    float retweeter = 7;
+    float super_user = 8;
+    float unknown = 9;
+}
+
+service Classification {
+    rpc Classify(UserFeatures) returns (UserClass) {}
+}

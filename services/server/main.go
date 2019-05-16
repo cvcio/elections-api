@@ -17,7 +17,7 @@ import (
 	"github.com/cvcio/elections-api/services/server/handlers"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/plagiari-sm/mediawatch/pkg/auth"
+	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/plagiari-sm/mediawatch/pkg/es"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
