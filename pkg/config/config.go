@@ -83,6 +83,10 @@ type Config struct {
 		ClientID     string `envconfig:"GITHUB_AUTH_CLIENT_ID" default:""`
 		ClientSecret string `envconfig:"GITHUB_AUTH_CLIENT_SECRET" default:""`
 	}
+	Classification struct {
+		Host string `envconfig:"CLASSIFICATION_HOST" default:"localhost"`
+		Port string `envconfig:"CLASSIFICATION_PORT" default:"50051"`
+	}
 }
 
 // New : Create new config struct
