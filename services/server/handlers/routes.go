@@ -90,6 +90,7 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 	annotations := &Annotations{
 		cfg: cfg,
 		db:  db,
+		es:  es,
 	}
 
 	authRoutes := app.Group("/api/auth")
@@ -107,11 +108,13 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 		public.POST("/users/verify", users.Verify)
 		public.POST("/users/2fa", users.SendPin)
 		public.POST("/users/token", users.Token)
+		public.GET("/p/annotate", annotations.GetRandom)
 		public.GET("/metrics/user/:id/volume", metrics.GetVolumeByUser)
 	}
 	private := app.Group("/v2")
 	{
 		private.Use(authmw.Authenticate())
+		private.GET("/annotate", annotations.GetRandom)
 		private.POST("/annotate", annotations.Create)
 	}
 	// Forbid Access
