@@ -2,7 +2,10 @@ version: 2.1
 orbs:
   compare-url: iynere/compare-url@0.4.10
 jobs:
-  build:
+  build_all:
+    branches:
+      only:
+        - master
     working_directory: /go/src/github.com/cvcio/elections-api
     docker:
     - image: golang:1.12.5
@@ -17,6 +20,27 @@ jobs:
         command: |
           # save value stored in file to a local env var
           CIRCLE_COMPARE_URL=$(cat CIRCLE_COMPARE_URL.txt)
+          git config --global url."https://$GITHUB_TOKEN:@github.com/".insteadOf "https://github.com/"
+          chmod +x ./build.sh
+          ./build.sh
+  build:
+    branches:
+      ignore:
+        - master
+    working_directory: /go/src/github.com/cvcio/elections-api
+    docker:
+    - image: golang:1.12.5
+    steps:
+    - checkout
+    # - compare-url/reconstruct
+    - setup_remote_docker:
+        version: 17.11.0-ce
+    - run:
+        name: build
+        shell: /bin/bash
+        command: |
+          # save value stored in file to a local env var
+          # CIRCLE_COMPARE_URL=$(cat CIRCLE_COMPARE_URL.txt)
           git config --global url."https://$GITHUB_TOKEN:@github.com/".insteadOf "https://github.com/"
           chmod +x ./build.sh
           ./build.sh
