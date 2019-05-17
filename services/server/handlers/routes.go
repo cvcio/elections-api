@@ -53,8 +53,8 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 			}
 			return
 		}(stream, session)
+		go Broadcast(stream, m)
 	}
-	go Broadcast(stream, m)
 
 	app := gin.Default()
 	app.RedirectTrailingSlash = true
