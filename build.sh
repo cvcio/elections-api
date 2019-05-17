@@ -116,7 +116,7 @@ if [[ $COMMIT_RANGE != *"..."* ]]; then
   # Walk through each changed file within the commit.
   echo "No commit range? (${COMMIT_RANGE})"
   # git diff-tree --no-commit-id --name-only -r $COMMIT_RANGE | while read line; do
-  git diff --name-only HEAD~10 | while read line; do
+  git diff --name-only HEAD~ | while read line; do
     processline $line
     echo "-"
   done

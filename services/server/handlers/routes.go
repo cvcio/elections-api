@@ -45,7 +45,15 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 		log.Debugf("Stream Connection Failed: %v", err)
 	}
 
-	go stream.Send(&proto.Message{Session: session})
+	if session != nil {
+		go func(stream proto.Twitter_StreamClient, session *proto.Session) {
+			err := stream.Send(&proto.Message{Session: session})
+			if err != nil {
+				log.Println(err)
+			}
+			return
+		}(stream, session)
+	}
 	go Broadcast(stream, m)
 
 	app := gin.Default()
