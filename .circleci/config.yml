@@ -20,7 +20,7 @@ jobs:
           git config --global url."https://$GITHUB_TOKEN:@github.com/".insteadOf "https://github.com/"
           chmod +x ./build.sh
           ./build.sh
-  build_brach:
+  build_branch:
     working_directory: /go/src/github.com/cvcio/elections-api
     docker:
     - image: golang:1.12.5
