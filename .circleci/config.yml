@@ -2,10 +2,7 @@ version: 2.1
 orbs:
   compare-url: iynere/compare-url@0.4.10
 jobs:
-  build_all:
-    branches:
-      only:
-        - master
+  build:
     working_directory: /go/src/github.com/cvcio/elections-api
     docker:
     - image: golang:1.12.5
@@ -23,10 +20,7 @@ jobs:
           git config --global url."https://$GITHUB_TOKEN:@github.com/".insteadOf "https://github.com/"
           chmod +x ./build.sh
           ./build.sh
-  build:
-    branches:
-      ignore:
-        - master
+  build_brach:
     working_directory: /go/src/github.com/cvcio/elections-api
     docker:
     - image: golang:1.12.5
@@ -44,3 +38,14 @@ jobs:
           git config --global url."https://$GITHUB_TOKEN:@github.com/".insteadOf "https://github.com/"
           chmod +x ./build.sh
           ./build.sh
+
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - build:
+         filters:
+            branches: { only: 'master' }
+      - build_branch:
+         filters:
+            branches: { ignore: 'master' }
