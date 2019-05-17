@@ -5,6 +5,7 @@ go 1.12
 require (
 	cloud.google.com/go v0.36.0 // indirect
 	github.com/ChimeraCoder/anaconda v2.0.0+incompatible
+	github.com/apex/log v1.1.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.4.0
 	github.com/go-chi/render v1.0.1

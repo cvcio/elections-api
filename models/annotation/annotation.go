@@ -16,19 +16,22 @@ const annotationsCollection = "annotations"
 
 // Annotation : Annotation Schema model
 type Annotation struct {
-	ID                   primitive.ObjectID `bson:"_id" json:"id"`
-	IDStr                string             `bson:"idStr" json:"idStr"`
-	CreatedAt            time.Time          `json:"createdAt" bson:"createdAt"`
-	UpdatedAt            time.Time          `json:"updatedAt" bson:"updatedAt"`
-	Deleted              bool               `json:"-" bson:"deleted"`
-	AnnotatorIDStr       string             `bson:"annotatorIdStr" json:"annotatorIdStr"`
-	AnnotatorScreenName  string             `bson:"annotatorScreenName" json:"annotatorScreenName"`
-	UserIDStr            string             `bson:"userIdStr" json:"userIdStr"`
-	UserScreenName       string             `bson:"userScreenName" json:"userScreenName"`
-	AccountType          string             `json:"accountType" bson:"accountType"`
-	PoliticalOrientation string             `json:"politicalOrientation" bson:"politicalOrientation"`
-	Context              []string           `json:"context" bson:"context"`
-	Note                 string             `json:"note" bson:"note"`
+	ID        primitive.ObjectID `bson:"_id" json:"id"`
+	IDStr     string             `bson:"idStr" json:"idStr"`
+	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
+	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt"`
+	Deleted   bool               `json:"-" bson:"deleted"`
+
+	AnnotatorIDStr      string `bson:"annotatorIdStr" json:"annotatorIdStr"`
+	AnnotatorScreenName string `bson:"annotatorScreenName" json:"annotatorScreenName"`
+
+	Text                 string   `json:"text" bson:"text"`
+	AccountType          string   `json:"accountType" bson:"accountType"`
+	PoliticalOrientation string   `json:"politicalOrientation" bson:"politicalOrientation"`
+	Context              []string `json:"context" bson:"context"`
+	Note                 string   `json:"note" bson:"note"`
+	Media                []string `json:"media" bson:"media"`
+	Urls                 []string `json:"urls" bson:"urls"`
 }
 
 // Create inserts a new user into the database.
