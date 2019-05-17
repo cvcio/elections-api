@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/rsa"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -10,15 +11,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
 	"github.com/cvcio/elections-api/pkg/db"
+	"github.com/cvcio/elections-api/pkg/es"
 	"github.com/cvcio/elections-api/pkg/mailer"
 	proto "github.com/cvcio/elections-api/pkg/proto"
 	"github.com/cvcio/elections-api/services/server/handlers"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/cvcio/elections-api/pkg/auth"
-	"github.com/cvcio/elections-api/pkg/es"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -110,7 +111,7 @@ func main() {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 
-	grpcConnection, err := grpc.Dial("localhost:50050", opts...)
+	grpcConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port), opts...)
 	if err != nil {
 		log.Debugf("main: GRPC Streamer did not connect: %v", err)
 	}

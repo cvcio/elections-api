@@ -20,7 +20,6 @@ require (
 	github.com/onsi/gomega v1.4.3
 	github.com/pkg/errors v0.8.1
 	github.com/plagiari-sm/mediawatch v0.0.0-20190421222303-7324a68b0cdb
-	github.com/plagiari-sm/psm-utils v0.0.0-20180530075352-7af15389819a
 	github.com/sirupsen/logrus v1.4.1
 	go.mongodb.org/mongo-driver v1.0.0
 	go.opencensus.io v0.19.2

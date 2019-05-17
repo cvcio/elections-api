@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -49,7 +50,7 @@ func main() {
 	grpcOptions = append(grpcOptions, grpc.WithInsecure())
 
 	// Create gRPC Streamer Connection
-	grpcStreamerConnection, err := grpc.Dial("localhost:50050", grpcOptions...)
+	grpcStreamerConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port), grpcOptions...)
 	if err != nil {
 		log.Debugf("main: GRPC Streamer did not connect: %v", err)
 	}
@@ -70,7 +71,7 @@ func main() {
 	}
 
 	// Create gRPC Classification Connection
-	grpcClassificationConnection, err := grpc.Dial("localhost:50051", grpcOptions...)
+	grpcClassificationConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Classification.Host, cfg.Classification.Port), grpcOptions...)
 	if err != nil {
 		log.Debugf("main: GRPC Classification did not connect: %v", err)
 	}
@@ -79,12 +80,15 @@ func main() {
 	// Create gRPC Classification Client
 	classification := proto.NewClassificationClient(grpcClassificationConnection)
 
-	api, _ := twitter.NewAPI(
+	api, err := twitter.NewAPI(
 		cfg.Twitter.TwitterAccessToken,
 		cfg.Twitter.TwitterAccessTokenSecret,
 		cfg.Twitter.TwitterConsumerKey,
 		cfg.Twitter.TwitterConsumerSecret,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a new Listener service, with our twitter stream and the scrape service grpc conn
 	svc := twitter.NewListener(api)
@@ -119,8 +123,16 @@ func main() {
 			log.Infof("New Tweet From %s", t.User.ScreenName)
 
 			go SaveTweet(esClient, &t)
-			go stream.Send(&proto.Message{Session: session, Tweet: string(tweet)})
 
+			if session != nil {
+				go func(stream proto.Twitter_StreamClient, session *proto.Session, tweet []byte) {
+					err := stream.Send(&proto.Message{Session: session, Tweet: string(tweet)})
+					if err != nil {
+						log.Println(err)
+					}
+					return
+				}(stream, session, tweet)
+			}
 		case <-osSignals:
 			os.Exit(1)
 		}

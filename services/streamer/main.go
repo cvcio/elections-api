@@ -102,6 +102,7 @@ func (s *TwitterHandler) Stream(stream proto.Twitter_StreamServer) error {
 	rec, err := stream.Recv()
 	if err != nil {
 		log.Debugf("Failed to Stream: %v", err)
+		return err
 	}
 
 	log.Infof("STREAMING FROM %s %s", rec.Session.Type, rec.Session.Id)
