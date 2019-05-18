@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/ChimeraCoder/anaconda"
@@ -39,14 +40,24 @@ func (ctrl *Annotations) Create(c *gin.Context) {
 // GetRandom Gets a random document from ES
 func (ctrl *Annotations) GetRandom(c *gin.Context) {
 	rand.Seed(time.Now().UnixNano())
-
-	q := elastic.NewFunctionScoreQuery().
-		AddScoreFunc(elastic.NewRandomFunction().Seed(rand.Intn(1000000))).
+	size := 1
+	if c.Query("size") != "" {
+		i, _ := strconv.Atoi(c.Query("size"))
+		if i < 0 {
+			i = 1
+		}
+		size = i
+	}
+	q := elastic.NewFunctionScoreQuery()
+	if c.Query("screen_name") != "" {
+		q = q.Query(elastic.NewTermQuery("user.screen_name", c.Query("screen_name")))
+	}
+	q = q.AddScoreFunc(elastic.NewRandomFunction().Seed(rand.Intn(1000000))).
 		ScoreMode("avg")
 
 	res, err := ctrl.es.Search().
 		Index("mediawatch_twitter_elections_tweets").
-		Type("document").Query(q).Size(1).
+		Type("document").Query(q).Size(size).
 		Do(context.Background())
 
 	if err != nil {
@@ -54,7 +65,7 @@ func (ctrl *Annotations) GetRandom(c *gin.Context) {
 		return
 	}
 
-	if len(res.Hits.Hits) > 0 {
+	if len(res.Hits.Hits) > 0 && size == 1 {
 		type T struct {
 			Text      string   `json:"full_text"`
 			CreatedAt string   `json:"created_at"`
