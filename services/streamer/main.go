@@ -116,7 +116,7 @@ func (s *TwitterHandler) Filter(sender string, m proto.Message, stream proto.Twi
 
 // Stream Endpoint
 func (s *TwitterHandler) Stream(stream proto.Twitter_StreamServer) error {
-	rec, err := stream.Recv()
+	_, err := stream.Recv()
 	if err != nil {
 		log.Debugf("Failed to Stream: %v", err)
 		return err

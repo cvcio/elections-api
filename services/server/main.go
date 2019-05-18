@@ -113,10 +113,10 @@ func main() {
 	if err != nil {
 		log.Debugf("main: GRPC Streamer did not connect: %v", err)
 	}
+	defer grpcConnection.Close()
 
 	// Create gRPC Chat Client
 	streamer := proto.NewTwitterClient(grpcConnection)
-	defer grpcConnection.Close()
 
 	// ========================================
 	// Create a server
