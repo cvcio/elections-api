@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"io"
 
 	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
@@ -26,6 +27,9 @@ import (
 func Broadcast(stream proto.Twitter_StreamClient, m *melody.Melody) {
 	for {
 		rec, err := stream.Recv()
+		if err == io.EOF {
+			return
+		}
 		if err != nil {
 			log.Errorf("RECEIVE FROM STREAMER ERROR: %s", err.Error())
 			return
@@ -48,17 +52,6 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 	stream, err := streamer.Stream(context.Background())
 	if err != nil {
 		log.Debugf("Stream Connection Failed: %v", err)
-	}
-
-	if session != nil {
-		go func(stream proto.Twitter_StreamClient, session *proto.Session) {
-			err := stream.Send(&proto.Message{Session: session})
-			if err != nil {
-				log.Println(err)
-			}
-			return
-		}(stream, session)
-		go Broadcast(stream, m)
 	}
 
 	app := gin.Default()
@@ -136,6 +129,20 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 		c.String(http.StatusForbidden, "Access Forbidden")
 		c.Abort()
 	})
+
+	if session != nil {
+		go func(stream proto.Twitter_StreamClient, session *proto.Session) {
+			err := stream.Send(&proto.Message{Session: session})
+			if err == io.EOF {
+				return
+			}
+			if err != nil {
+				log.Infof("proto.Twitter_StreamClient -> Error: %s", err.Error())
+			}
+			return
+		}(stream, session)
+		go Broadcast(stream, m)
+	}
 
 	return app
 }

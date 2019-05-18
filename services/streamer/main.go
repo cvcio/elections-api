@@ -15,6 +15,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
 	proto "github.com/cvcio/elections-api/pkg/proto"
@@ -29,7 +30,9 @@ type Client struct {
 
 // TwitterHandler ...
 type TwitterHandler struct {
-	cachedSessions map[string]Client
+	cachedListeners map[string]Client
+	cachedClients   map[string]Client
+
 	// A Mutex is a mutual exclusion lock.
 	// The zero value for a Mutex is an unlocked mutex.
 	mu sync.Mutex
@@ -55,7 +58,6 @@ func (s *TwitterHandler) Listen(stream proto.Twitter_StreamServer, ch chan<- pro
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
-			close(ch)
 			return
 		}
 		if err != nil {
@@ -70,10 +72,26 @@ func (s *TwitterHandler) Connect(ctx context.Context, req *proto.Session) (*prot
 	log.Infof("CONNECTION FROM %s %s", req.Type, req.Id)
 
 	s.withWriteLock(func() {
-		s.cachedSessions[req.Id] = Client{
-			Type:    req.Type,
-			Id:      req.Id,
-			Channel: make(chan proto.Message),
+		/*
+			s.cachedSessions[req.Id] = Client{
+				Type:    req.Type,
+				Id:      req.Id,
+				Channel: make(chan proto.Message),
+			}
+		*/
+		if req.Type == "listener" {
+			s.cachedListeners[req.Id] = Client{
+				Type:    req.Type,
+				Id:      req.Id,
+				Channel: make(chan proto.Message),
+			}
+		}
+		if req.Type == "api" {
+			s.cachedClients[req.Type] = Client{
+				Type:    req.Type,
+				Id:      req.Id,
+				Channel: make(chan proto.Message),
+			}
 		}
 	})
 	s.in++
@@ -88,10 +106,9 @@ func (s *TwitterHandler) Filter(sender string, m proto.Message, stream proto.Twi
 	// Unlock unlocks m. It is a run-time error if m is not locked
 	// on entry to Unlock.
 	defer s.mu.Unlock()
-
-	for _, receiver := range s.cachedSessions {
-		if sender != receiver.Type {
-			log.Debugf("STREAMING TO %s->%s %v", sender, receiver.Type, receiver)
+	for _, receiver := range s.cachedClients {
+		if sender != receiver.Id {
+			log.Infof("STREAMING %s->%s", sender, receiver.Id)
 			receiver.Channel <- m
 		}
 	}
@@ -105,9 +122,6 @@ func (s *TwitterHandler) Stream(stream proto.Twitter_StreamServer) error {
 		return err
 	}
 
-	log.Infof("STREAMING FROM %s %s", rec.Session.Type, rec.Session.Id)
-	// s.cachedSessions[rec.Session.Id] = make(chan proto.Message)
-
 	// Non-Blocking Client Messages Channel
 	messagesChannel := make(chan proto.Message, 100)
 	go s.Listen(stream, messagesChannel)
@@ -116,16 +130,15 @@ func (s *TwitterHandler) Stream(stream proto.Twitter_StreamServer) error {
 		select {
 		case <-stream.Context().Done():
 			return stream.Context().Err()
-		case clientMessage := <-messagesChannel:
-			go s.Filter(clientMessage.Session.Type, clientMessage, stream)
-		case channelMessage := <-s.cachedSessions[rec.Session.Id].Channel:
-			stream.Send(&channelMessage)
+		case incoming := <-messagesChannel:
+			go s.Filter(incoming.Session.Id, incoming, stream)
+		case outgoing := <-s.cachedClients["api"].Channel:
+			stream.Send(&outgoing)
 		}
 	}
 }
 
 func main() {
-	time.Sleep(0 * time.Second)
 	// ========================================
 	// Configure
 	cfg := config.New()
@@ -135,6 +148,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("main: Error loading config: %s", err.Error())
 	}
+
+	// Configure logger
+	// Default level for this example is info, unless debug flag is present
+	level, err := log.ParseLevel(cfg.Log.Level)
+	if err != nil {
+		level = log.InfoLevel
+		log.Error(err.Error())
+	}
+	log.SetLevel(level)
 
 	// Get local network address to listen on
 	listen, err := net.Listen("tcp", fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port))
@@ -157,11 +179,16 @@ func main() {
 	// Create the gRPC Service
 	// Parse Server Options
 	// Create grpc server
-	var opts []grpc.ServerOption
-	svc := grpc.NewServer(opts...)
+	var grpcOptions []grpc.ServerOption
+	grpcOptions = append(grpcOptions, grpc.KeepaliveParams(keepalive.ServerParameters{
+		MaxConnectionIdle: 5 * time.Minute,
+	}))
+
+	svc := grpc.NewServer(grpcOptions...)
 	// Register Service Handlers
 	proto.RegisterTwitterServer(svc, &TwitterHandler{
-		cachedSessions: make(map[string]Client),
+		cachedListeners: make(map[string]Client),
+		cachedClients:   make(map[string]Client),
 	})
 
 	log.Printf("Starting gRPC Server on: %s:%s", cfg.Streamer.Host, cfg.Streamer.Port)

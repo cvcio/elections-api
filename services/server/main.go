@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
@@ -25,7 +24,6 @@ import (
 )
 
 func main() {
-	time.Sleep(2 * time.Second)
 	// ========================================
 	// Configure
 	cfg := config.New()
@@ -51,26 +49,26 @@ func main() {
 		log.SetFormatter(&log.TextFormatter{})
 	}
 
-	log.Info("main: Starting")
+	log.Debug("main: Starting")
 	// ============================================== ==============
 	// Start Mongo
-	log.Info("main: Initialize Mongo")
+	log.Debug("main: Initialize Mongo")
 	dbConn, err := db.New(cfg.MongoURL(), cfg.Mongo.Path, cfg.Mongo.DialTimeout)
 	if err != nil {
 		log.Fatalf("main: Register DB: %v", err)
 	}
-	log.Info("main: Connected to Mongo")
+	log.Debug("main: Connected to Mongo")
 	defer dbConn.Close()
 
 	// =========================================================================
 	// Start elasticsearch
-	log.Info("main: Initialize Elasticsearch")
+	log.Debug("main: Initialize Elasticsearch")
 	esClient, err := es.NewElasticsearch(cfg.Elasticsearch.Host, cfg.Elasticsearch.Port, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
 	if err != nil {
 		log.Fatalf("main: Register Elasticsearch: %v", err)
 	}
 
-	log.Info("main: Connected to Elasticsearch")
+	log.Debug("main: Connected to Elasticsearch")
 
 	// =========================================================================
 	// Find auth keys
@@ -91,7 +89,7 @@ func main() {
 		log.Fatalf("main: Constructing authenticator: %v", err)
 	}
 
-	log.Info("main: Created auth keys")
+	log.Debug("main: Created auth keys")
 
 	// Create mail service"github.com/sirupsen/logrus"
 	mail := mailer.New(
@@ -104,21 +102,21 @@ func main() {
 		cfg.SMTP.Reply,
 	)
 
-	log.Info("main: Created mail service")
+	log.Debug("main: Created mail service")
 
 	// Create the gRPC Service
 	// Parse Server Options
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithInsecure())
+	var grpcOptions []grpc.DialOption
+	grpcOptions = append(grpcOptions, grpc.WithInsecure(), grpc.WithBlock())
 
-	grpcConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port), opts...)
+	grpcConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port), grpcOptions...)
 	if err != nil {
 		log.Debugf("main: GRPC Streamer did not connect: %v", err)
 	}
-	defer grpcConnection.Close()
 
 	// Create gRPC Chat Client
 	streamer := proto.NewTwitterClient(grpcConnection)
+	defer grpcConnection.Close()
 
 	// ========================================
 	// Create a server
@@ -146,9 +144,9 @@ func main() {
 	serverErrors := make(chan error, 1)
 
 	// Start the service listening for requests.
-	log.Info("main: Ready to start")
+	log.Debug("main: Ready to start")
 	go func() {
-		log.Infof("main: Starting api Listening %s", cfg.Web.Host)
+		log.Infof("main: Starting api Listening %s%s", cfg.Web.Host, cfg.Web.Port)
 		serverErrors <- api.ListenAndServe()
 	}()
 

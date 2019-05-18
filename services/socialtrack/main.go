@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,7 +24,6 @@ import (
 )
 
 func main() {
-	time.Sleep(4 * time.Second)
 	// ========================================
 	// Configure
 	cfg := config.New()
@@ -33,6 +33,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("main: Error loading config: %s", err.Error())
 	}
+
+	// Configure logger
+	// Default level for this example is info, unless debug flag is present
+	level, err := log.ParseLevel(cfg.Log.Level)
+	if err != nil {
+		level = log.InfoLevel
+		log.Error(err.Error())
+	}
+	log.SetLevel(level)
 
 	// =========================================================================
 	// Start elasticsearch
@@ -47,17 +56,17 @@ func main() {
 	// Create the gRPC Service
 	// Parse Server Options
 	var grpcOptions []grpc.DialOption
-	grpcOptions = append(grpcOptions, grpc.WithInsecure())
+	grpcOptions = append(grpcOptions, grpc.WithInsecure(), grpc.WithBlock())
 
 	// Create gRPC Streamer Connection
 	grpcStreamerConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port), grpcOptions...)
 	if err != nil {
 		log.Debugf("main: GRPC Streamer did not connect: %v", err)
 	}
-	defer grpcStreamerConnection.Close()
 
 	// Create gRPC Streamer Client
 	streamer := proto.NewTwitterClient(grpcStreamerConnection)
+	defer grpcStreamerConnection.Close()
 
 	session, err := streamer.Connect(context.Background(), &proto.Session{Id: primitive.NewObjectID().Hex(), Type: "listener"})
 	if err != nil {
@@ -75,10 +84,10 @@ func main() {
 	if err != nil {
 		log.Debugf("main: GRPC Classification did not connect: %v", err)
 	}
-	defer grpcClassificationConnection.Close()
 
 	// Create gRPC Classification Client
 	classification := proto.NewClassificationClient(grpcClassificationConnection)
+	defer grpcClassificationConnection.Close()
 
 	api, err := twitter.NewAPI(
 		cfg.Twitter.TwitterAccessToken,
@@ -103,6 +112,7 @@ func main() {
 			ids = append(ids, u.IdStr)
 		}
 	}
+	log.Infof("LISTENING %s %s", cfg.Streamer.Follow, cfg.Streamer.Track)
 	go svc.Listen(ids, cfg.Streamer.Track, tweetChan)
 
 	// ========================================
@@ -120,19 +130,21 @@ func main() {
 			c := classifyNestedTweet(esClient, &t, classification)
 			tweet, _ := json.Marshal(&c)
 
-			log.Infof("New Tweet From %s", t.User.ScreenName)
-
 			go SaveTweet(esClient, &t)
 
 			if session != nil {
 				go func(stream proto.Twitter_StreamClient, session *proto.Session, tweet []byte) {
 					err := stream.Send(&proto.Message{Session: session, Tweet: string(tweet)})
+					if err == io.EOF {
+						return
+					}
 					if err != nil {
-						log.Println(err)
+						log.Infof("THE FUCK ERROR: %s", err.Error())
 					}
 					return
 				}(stream, session, tweet)
 			}
+
 		case <-osSignals:
 			os.Exit(1)
 		}
