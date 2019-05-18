@@ -25,7 +25,12 @@ import (
 // Broadcast Receives Messages from the Streaming Service and Broadcasts back to websocket
 func Broadcast(stream proto.Twitter_StreamClient, m *melody.Melody) {
 	for {
-		rec, _ := stream.Recv()
+		rec, err := stream.Recv()
+		if err != nil {
+			log.Errorf("RECEIVE FROM STREAMER ERROR: %s", err.Error())
+			return
+		}
+		log.Infof("RECEIVE FROM STREAMER TWEET %s", rec.Tweet)
 		m.Broadcast([]byte(rec.Tweet))
 	}
 }
@@ -71,7 +76,7 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 		app.Use(middleware.EnableCORS("*"))
 	} else {
 		gin.SetMode(gin.ReleaseMode)
-		app.Use(middleware.EnableCORS("*." + cfg.Web.DomainName))
+		app.Use(middleware.EnableCORS(" *." + cfg.Web.DomainName))
 	}
 
 	goth.UseProviders(

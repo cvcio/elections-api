@@ -15,7 +15,7 @@ COPY go.sum /go/src/github.com/cvcio/elections-api/
 # Get dependancies - will also be cached if we won't change mod/sum
 # RUN go mod download
 
-# COPY the source code 
+# COPY the source code
 COPY pkg/ /go/src/github.com/cvcio/elections-api/pkg/
 COPY vendor/ /go/src/github.com/cvcio/elections-api/vendor/
 COPY proto/ /go/src/github.com/cvcio/elections-api/proto/
@@ -30,4 +30,3 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /server/
 COPY --from=0 /go/src/github.com/cvcio/elections-api/services/server .
 ENTRYPOINT ["/server/server"]
-
