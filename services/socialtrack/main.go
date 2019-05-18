@@ -320,9 +320,9 @@ func getUserFeatures(u *anaconda.User) *proto.UserFeatures {
 		Lists:     u.ListedCount,
 		Dates:     dates,
 		Actions:   float64((u.StatusesCount + int64(u.FavouritesCount))) / dates,
-		Ffr:       0,
-		Stfv:      0,
-		Fstfv:     0,
+		Ffr:       float64(u.FollowersCount),
+		Stfv:      float64(u.StatusesCount),
+		Fstfv:     float64(u.FollowersCount),
 	}
 
 	if u.FriendsCount > 0 {

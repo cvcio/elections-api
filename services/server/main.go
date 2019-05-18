@@ -46,7 +46,7 @@ func main() {
 	log.SetLevel(level)
 
 	// Adjust logging format
-	log.SetFormatter(&log.TextFormatter{})
+	log.SetFormatter(&log.JSONFormatter{})
 	if cfg.Log.Dev {
 		log.SetFormatter(&log.TextFormatter{})
 	}
