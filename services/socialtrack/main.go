@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,6 +14,7 @@ import (
 	"github.com/cvcio/elections-api/pkg/config"
 	"github.com/cvcio/elections-api/pkg/es"
 	proto "github.com/cvcio/elections-api/pkg/proto"
+	"github.com/cvcio/elections-api/pkg/redis"
 	"github.com/cvcio/elections-api/pkg/twitter"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/olivere/elastic"
@@ -53,31 +53,37 @@ func main() {
 
 	log.Info("main: Connected to Elasticsearch")
 
+	// Que
+	pubsub := redis.New(&redis.NewInput{
+		RedisURL: cfg.Redis.Host,
+	})
+
 	// Create the gRPC Service
 	// Parse Server Options
 	var grpcOptions []grpc.DialOption
-	grpcOptions = append(grpcOptions, grpc.WithInsecure(), grpc.WithBlock())
+	grpcOptions = append(grpcOptions, grpc.WithInsecure())
+	/*
+		// Create gRPC Streamer Connection
+		grpcStreamerConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port), grpcOptions...)
+		if err != nil {
+			log.Debugf("main: GRPC Streamer did not connect: %v", err)
+		}
 
-	// Create gRPC Streamer Connection
-	grpcStreamerConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port), grpcOptions...)
-	if err != nil {
-		log.Debugf("main: GRPC Streamer did not connect: %v", err)
-	}
+		defer grpcStreamerConnection.Close()
+		// Create gRPC Streamer Client
+		streamer := proto.NewTwitterClient(grpcStreamerConnection)
 
-	// Create gRPC Streamer Client
-	streamer := proto.NewTwitterClient(grpcStreamerConnection)
-	defer grpcStreamerConnection.Close()
+		session, err := streamer.Connect(context.Background(), &proto.Session{Id: primitive.NewObjectID().Hex(), Type: "listener"})
+		if err != nil {
+			log.Debugf("Can't join streamer %s", err.Error())
+		}
 
-	session, err := streamer.Connect(context.Background(), &proto.Session{Id: primitive.NewObjectID().Hex(), Type: "listener"})
-	if err != nil {
-		log.Debugf("Can't join streamer %s", err.Error())
-	}
-
-	// Connect to Stream
-	stream, err := streamer.Stream(context.Background())
-	if err != nil {
-		log.Debugf("Stream Connection Failed: %v", err)
-	}
+		// Connect to Stream
+		stream, err := streamer.Stream(context.Background())
+		if err != nil {
+			log.Debugf("Stream Connection Failed: %v", err)
+		}
+	*/
 
 	// Create gRPC Classification Connection
 	grpcClassificationConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Classification.Host, cfg.Classification.Port), grpcOptions...)
@@ -85,9 +91,9 @@ func main() {
 		log.Debugf("main: GRPC Classification did not connect: %v", err)
 	}
 
+	defer grpcClassificationConnection.Close()
 	// Create gRPC Classification Client
 	classification := proto.NewClassificationClient(grpcClassificationConnection)
-	defer grpcClassificationConnection.Close()
 
 	api, err := twitter.NewAPI(
 		cfg.Twitter.TwitterAccessToken,
@@ -132,17 +138,25 @@ func main() {
 
 			go SaveTweet(esClient, &t)
 
-			if session != nil {
-				go func(stream proto.Twitter_StreamClient, session *proto.Session, tweet []byte) {
-					err := stream.Send(&proto.Message{Session: session, Tweet: string(tweet)})
-					if err == io.EOF {
+			/*
+				if session != nil {
+					go func(stream proto.Twitter_StreamClient, session *proto.Session, tweet []byte) {
+						err := stream.Send(&proto.Message{Session: session, Tweet: string(tweet)})
+						if err == io.EOF {
+							return
+						}
+						if err != nil {
+							log.Infof("THE FUCK ERROR: %s", err.Error())
+						}
 						return
-					}
-					if err != nil {
-						log.Infof("THE FUCK ERROR: %s", err.Error())
-					}
-					return
-				}(stream, session, tweet)
+					}(stream, session, tweet)
+				}
+			*/
+
+			err = pubsub.Publish("tweets", string(tweet))
+			if err != nil {
+				log.Infof("Publish Error: %s", err.Error())
+				return
 			}
 
 		case <-osSignals:

@@ -9,13 +9,11 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/cvcio/elections-api/pkg/config"
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
 	proto "github.com/cvcio/elections-api/pkg/proto"
@@ -179,12 +177,15 @@ func main() {
 	// Create the gRPC Service
 	// Parse Server Options
 	// Create grpc server
-	var grpcOptions []grpc.ServerOption
-	grpcOptions = append(grpcOptions, grpc.KeepaliveParams(keepalive.ServerParameters{
-		MaxConnectionIdle: 5 * time.Minute,
-	}))
+	/*
+		var grpcOptions []grpc.ServerOption
+		grpcOptions = append(grpcOptions, grpc.KeepaliveParams(keepalive.ServerParameters{
+			MaxConnectionIdle: 5 * time.Minute,
+		}))
 
-	svc := grpc.NewServer(grpcOptions...)
+		svc := grpc.NewServer(grpcOptions...)
+	*/
+	svc := grpc.NewServer()
 	// Register Service Handlers
 	proto.RegisterTwitterServer(svc, &TwitterHandler{
 		cachedListeners: make(map[string]Client),

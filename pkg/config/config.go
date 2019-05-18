@@ -25,6 +25,9 @@ type Config struct {
 		Debug           bool          `default:"true" envconfig:"DEBUG"`
 		DomainName      string        `default:"mediawatch.io" envconfig:"DOMAIN_NAME"`
 	}
+	Redis struct {
+		Host string `default:"localhost:6379" envconfig:"REDIS_HOST"`
+	}
 	Streamer struct {
 		Host   string   `default:"localhost" envconfig:"STREAMER_HOST"`
 		Port   string   `default:"50050" envconfig:"STREAMER_PORT"`

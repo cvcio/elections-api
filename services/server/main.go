@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/rsa"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -15,12 +14,11 @@ import (
 	"github.com/cvcio/elections-api/pkg/db"
 	"github.com/cvcio/elections-api/pkg/es"
 	"github.com/cvcio/elections-api/pkg/mailer"
-	proto "github.com/cvcio/elections-api/pkg/proto"
+	"github.com/cvcio/elections-api/pkg/redis"
 	"github.com/cvcio/elections-api/services/server/handlers"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 )
 
 func main() {
@@ -104,19 +102,26 @@ func main() {
 
 	log.Debug("main: Created mail service")
 
-	// Create the gRPC Service
-	// Parse Server Options
-	var grpcOptions []grpc.DialOption
-	grpcOptions = append(grpcOptions, grpc.WithInsecure(), grpc.WithBlock())
+	// Que
+	pubsub := redis.New(&redis.NewInput{
+		RedisURL: cfg.Redis.Host,
+	})
 
-	grpcConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port), grpcOptions...)
-	if err != nil {
-		log.Debugf("main: GRPC Streamer did not connect: %v", err)
-	}
-	defer grpcConnection.Close()
+	/*
+		// Create the gRPC Service
+		// Parse Server Options
+		var grpcOptions []grpc.DialOption
+		grpcOptions = append(grpcOptions, grpc.WithInsecure())
 
-	// Create gRPC Chat Client
-	streamer := proto.NewTwitterClient(grpcConnection)
+		grpcConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port), grpcOptions...)
+		if err != nil {
+			log.Debugf("main: GRPC Streamer did not connect: %v", err)
+		}
+		defer grpcConnection.Close()
+
+		// Create gRPC Chat Client
+		streamer := proto.NewTwitterClient(grpcConnection)
+	*/
 
 	// ========================================
 	// Create a server
@@ -130,7 +135,8 @@ func main() {
 			esClient,
 			authenticator,
 			mail,
-			streamer,
+			pubsub,
+			// streamer,
 		),
 		ReadTimeout:    cfg.Web.ReadTimeout,
 		WriteTimeout:   cfg.Web.WriteTimeout,
