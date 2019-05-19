@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"io"
 
@@ -15,8 +14,7 @@ import (
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/twitter"
 	"gopkg.in/olahol/melody.v1"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/cvcio/elections-api/pkg/redis"
 
 	proto "github.com/cvcio/elections-api/pkg/proto"
 	"github.com/gin-gonic/gin"
@@ -40,9 +38,9 @@ func Broadcast(stream proto.Twitter_StreamClient, m *melody.Melody) {
 }
 
 // API : Returns an new API
-func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.Authenticator, mail *mailer.Mailer, streamer proto.TwitterClient) http.Handler {
+func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.Authenticator, mail *mailer.Mailer, streamer *redis.Service/*proto.TwitterClient*/ ) http.Handler {
 	m := melody.New()
-
+	/*
 	session, err := streamer.Connect(context.Background(), &proto.Session{Id: primitive.NewObjectID().Hex(), Type: "api"})
 	if err != nil {
 		log.Debugf("Can't join streamer %s", err.Error())
@@ -53,7 +51,7 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 	if err != nil {
 		log.Debugf("Stream Connection Failed: %v", err)
 	}
-
+	*/
 	app := gin.Default()
 	app.RedirectTrailingSlash = true
 	app.RedirectFixedPath = true
@@ -130,6 +128,20 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 		c.Abort()
 	})
 
+	tweets := make(chan []byte)
+	err := streamer.Subscribe("tweets", tweets)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go func (tweets chan []byte,m *melody.Melody)  {
+		for {
+			tweet := <-tweets
+			log.Info(string(tweet))
+			m.Broadcast(tweet)
+		}
+	}(tweets, m)
+	/*
 	if session != nil {
 		go func(stream proto.Twitter_StreamClient, session *proto.Session) {
 			err := stream.Send(&proto.Message{Session: session})
@@ -143,6 +155,7 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 		}(stream, session)
 		go Broadcast(stream, m)
 	}
+	*/
 
 	return app
 }
