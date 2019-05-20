@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,6 +25,28 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/grpc"
 )
+
+func getFollow(path string) []string {
+	var i int
+	c, _ := os.Open(path)
+	n := csv.NewReader(bufio.NewReader(c))
+	var str []string
+	for {
+		line, error := n.Read()
+		if error == io.EOF {
+			break
+		} else if error != nil {
+			log.Fatal(error)
+		}
+		if i > 0 {
+			idStr := line[1]
+			// str += idStr + ", "
+			str = append(str, idStr)
+		}
+		i++
+	}
+	return str
+}
 
 func main() {
 	// ========================================
@@ -62,28 +87,6 @@ func main() {
 	// Parse Server Options
 	var grpcOptions []grpc.DialOption
 	grpcOptions = append(grpcOptions, grpc.WithInsecure())
-	/*
-		// Create gRPC Streamer Connection
-		grpcStreamerConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port), grpcOptions...)
-		if err != nil {
-			log.Debugf("main: GRPC Streamer did not connect: %v", err)
-		}
-
-		defer grpcStreamerConnection.Close()
-		// Create gRPC Streamer Client
-		streamer := proto.NewTwitterClient(grpcStreamerConnection)
-
-		session, err := streamer.Connect(context.Background(), &proto.Session{Id: primitive.NewObjectID().Hex(), Type: "listener"})
-		if err != nil {
-			log.Debugf("Can't join streamer %s", err.Error())
-		}
-
-		// Connect to Stream
-		stream, err := streamer.Stream(context.Background())
-		if err != nil {
-			log.Debugf("Stream Connection Failed: %v", err)
-		}
-	*/
 
 	// Create gRPC Classification Connection
 	grpcClassificationConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Classification.Host, cfg.Classification.Port), grpcOptions...)
@@ -112,14 +115,14 @@ func main() {
 	tweetChan := make(chan anaconda.Tweet)
 
 	// start Listening the twitter stream
-	var ids []string
-	for _, username := range cfg.Streamer.Follow {
-		if u := svc.GetUsersShow(username); u != nil {
-			ids = append(ids, u.IdStr)
-		}
+
+	var followIds []string
+	if cfg.Streamer.Follow != "" {
+		followIds = getFollow(cfg.Streamer.Follow)
 	}
-	log.Infof("LISTENING %s %s", cfg.Streamer.Follow, cfg.Streamer.Track)
-	go svc.Listen(ids, cfg.Streamer.Track, tweetChan)
+
+	log.Infof("LISTENING %s %s", followIds, cfg.Streamer.Track)
+	go svc.Listen(followIds, cfg.Streamer.Track, tweetChan)
 
 	// ========================================
 	// Shutdown

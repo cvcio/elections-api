@@ -7,7 +7,6 @@ import (
 	"github.com/cvcio/elections-api/pkg/db"
 	"github.com/gin-gonic/gin"
 	"github.com/olivere/elastic"
-	log "github.com/sirupsen/logrus"
 )
 
 // Metrics Controller
@@ -19,8 +18,6 @@ type Metrics struct {
 
 // GetVolumeByUser ...
 func (ctrl *Metrics) GetVolumeByUser(c *gin.Context) {
-	log.Infof("%s", c.Param("id"))
-
 	agg := elastic.NewDateHistogramAggregation().
 		Field("crawled_at").Interval("hour")
 
@@ -43,4 +40,20 @@ func (ctrl *Metrics) GetVolumeByUser(c *gin.Context) {
 	}
 
 	ResponseJSON(c, results)
+}
+
+// CountByUser ...
+func (ctrl *Metrics) CountByUser(c *gin.Context) {
+	q := elastic.NewBoolQuery()
+	q = q.Must(elastic.NewTermQuery("screen_name", c.Param("id")))
+	count, err := ctrl.es.
+		Count("mediawatch_twitter_elections_users").
+		Type("document").Query(q).Do(context.Background())
+
+	if err != nil {
+		ResponseError(c, 404, err.Error())
+		return
+	}
+
+	ResponseJSON(c, map[string]interface{}{"value": count})
 }

@@ -31,7 +31,7 @@ type Config struct {
 	Streamer struct {
 		Host   string   `default:"localhost" envconfig:"STREAMER_HOST"`
 		Port   string   `default:"50050" envconfig:"STREAMER_PORT"`
-		Follow []string `default:"" envconfig:"FOLLOW"`
+		Follow string   `default:"" envconfig:"FOLLOW"`
 		Track  []string `default:"" envconfig:"TRACK"`
 	}
 	Twitter struct {
