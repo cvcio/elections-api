@@ -54,9 +54,10 @@ func main() {
 	log.Info("main: Connected to Elasticsearch")
 
 	// Que
-	pubsub := redis.New(&redis.NewInput{
-		RedisURL: cfg.Redis.Host,
-	})
+	pubsub, err := redis.New(cfg.Redis.Host)
+	if err != nil {
+		log.Fatal("main: Register Redis Pub/Sub: %v", err.Error())
+	}
 
 	// Create the gRPC Service
 	// Parse Server Options

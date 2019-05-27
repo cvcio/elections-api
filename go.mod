@@ -5,12 +5,11 @@ go 1.12
 require (
 	cloud.google.com/go v0.36.0 // indirect
 	github.com/ChimeraCoder/anaconda v2.0.0+incompatible
-	github.com/apex/log v1.1.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/garyburd/redigo v1.6.0
 	github.com/gin-gonic/gin v1.4.0
 	github.com/go-chi/render v1.0.1
 	github.com/golang/protobuf v1.3.1
+	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/gorilla/sessions v1.1.3 // indirect
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.1 // indirect

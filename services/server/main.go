@@ -102,10 +102,11 @@ func main() {
 
 	log.Debug("main: Created mail service")
 
-	// Que
-	pubsub := redis.New(&redis.NewInput{
-		RedisURL: cfg.Redis.Host,
-	})
+	// Queue setup
+	pubsub, err := redis.New(cfg.Redis.Host)
+	if err != nil {
+		log.Fatal("main: Register Redis Pub/Sub: %v", err.Error())
+	}
 
 	/*
 		// Create the gRPC Service

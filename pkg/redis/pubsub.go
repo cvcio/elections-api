@@ -1,8 +1,10 @@
 package redis
 
 import (
-	"github.com/garyburd/redigo/redis"
-	log "github.com/sirupsen/logrus"
+	"errors"
+	"fmt"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 // Service service
@@ -11,20 +13,15 @@ type Service struct {
 	conn redis.Conn
 }
 
-// NewInput input for constructor
-type NewInput struct {
-	RedisURL string
-}
-
 // New return new service
-func New(input *NewInput) *Service {
-	if input == nil {
-		log.Fatal("input is required")
+func New(input string) (*Service, error) {
+	if input == "" {
+		return nil, errors.New("Redis url cannot be empty")
 	}
 	var redispool *redis.Pool
 	redispool = &redis.Pool{
 		Dial: func() (redis.Conn, error) {
-			return redis.Dial("tcp", input.RedisURL)
+			return redis.Dial("tcp", input)
 		},
 	}
 
@@ -34,13 +31,13 @@ func New(input *NewInput) *Service {
 	// Test the connection
 	_, err := conn.Do("PING")
 	if err != nil {
-		log.Fatalf("can't connect to the redis database, got error:\n%v", err)
+		return nil, errors.New(fmt.Sprintf("can't connect to the redis database, got error:\n%v", err))
 	}
 
 	return &Service{
 		pool: redispool,
 		conn: conn,
-	}
+	}, nil
 }
 
 // Publish publish key value
@@ -61,7 +58,7 @@ func (s *Service) Subscribe(key string, msg chan []byte) error {
 	go func() {
 		for {
 			switch v := psc.Receive().(type) {
-			case redis.PMessage:
+			case redis.Message:
 				msg <- v.Data
 			}
 		}
