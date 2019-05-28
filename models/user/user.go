@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/pkg/errors"
+	"github.com/plagiari-sm/mediawatch/pkg/auth"
 	"github.com/plagiari-sm/mediawatch/pkg/db"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

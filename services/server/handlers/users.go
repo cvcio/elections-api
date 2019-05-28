@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/cvcio/elections-api/models/user"
-	"github.com/cvcio/elections-api/pkg/auth"
+	"github.com/plagiari-sm/mediawatch/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
-	"github.com/cvcio/elections-api/pkg/mailer"
 	"github.com/gin-gonic/gin"
 	gothic "github.com/markbates/goth/gothic"
 	"github.com/plagiari-sm/mediawatch/pkg/db"
+	"github.com/plagiari-sm/mediawatch/pkg/mailer"
 	log "github.com/sirupsen/logrus"
 )
 

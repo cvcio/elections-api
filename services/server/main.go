@@ -9,15 +9,15 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
 	"github.com/cvcio/elections-api/pkg/es"
-	"github.com/cvcio/elections-api/pkg/mailer"
-	"github.com/cvcio/elections-api/pkg/redis"
 	"github.com/cvcio/elections-api/services/server/handlers"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/plagiari-sm/mediawatch/pkg/auth"
 	"github.com/plagiari-sm/mediawatch/pkg/db"
+	"github.com/plagiari-sm/mediawatch/pkg/mailer"
+	"github.com/plagiari-sm/mediawatch/pkg/redis"
 	log "github.com/sirupsen/logrus"
 )
 

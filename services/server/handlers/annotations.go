@@ -10,9 +10,9 @@ import (
 	"github.com/ChimeraCoder/anaconda"
 	"github.com/cvcio/elections-api/models/annotation"
 	"github.com/cvcio/elections-api/pkg/config"
-	"github.com/plagiari-sm/mediawatch/pkg/db"
 	"github.com/gin-gonic/gin"
 	"github.com/olivere/elastic"
+	"github.com/plagiari-sm/mediawatch/pkg/db"
 )
 
 // Annotations Controller
