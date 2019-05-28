@@ -9,17 +9,14 @@ require (
 	github.com/gin-gonic/gin v1.4.0
 	github.com/go-chi/render v1.0.1
 	github.com/golang/protobuf v1.3.1
-	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/gorilla/sessions v1.1.3 // indirect
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/kelseyhightower/envconfig v1.3.0
 	github.com/markbates/goth v1.51.0
 	github.com/olivere/elastic v6.2.16+incompatible
-	github.com/onsi/ginkgo v1.7.0
-	github.com/onsi/gomega v1.4.3
 	github.com/pkg/errors v0.8.1
-	github.com/plagiari-sm/mediawatch v0.0.0-20190421222303-7324a68b0cdb
+	github.com/plagiari-sm/mediawatch v0.0.0-20190528132629-cfde6b8ee54d
 	github.com/sirupsen/logrus v1.4.1
 	go.mongodb.org/mongo-driver v1.0.0
 	go.opencensus.io v0.19.2
@@ -28,6 +25,5 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	golang.org/x/sys v0.0.0-20190322080309-f49334f85ddc // indirect
 	google.golang.org/grpc v1.19.1
-	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/olahol/melody.v1 v1.0.0-20170518105555-d52139073376
 )
