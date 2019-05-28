@@ -6,7 +6,7 @@ import (
 
 	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
-	"github.com/cvcio/elections-api/pkg/db"
+	"github.com/plagiari-sm/mediawatch/pkg/db"
 	"github.com/cvcio/elections-api/pkg/mailer"
 	"github.com/cvcio/elections-api/pkg/middleware"
 	"github.com/olivere/elastic"

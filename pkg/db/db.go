@@ -27,7 +27,7 @@ var ErrInvalidDBProvided = errors.New("invalid DB provided")
 type DB struct {
 
 	// MongoDB Support.
-	Database *mongo.Database
+	database *mongo.Database
 }
 
 // New returns a new DB value for use with MongoDB based on a registered
@@ -55,7 +55,7 @@ func New(url string, database string, timeout time.Duration) (*DB, error) {
 	}
 
 	db := DB{
-		Database: client.Database(database),
+		database: client.Database(database),
 		// session:  ses,
 	}
 
@@ -64,7 +64,7 @@ func New(url string, database string, timeout time.Duration) (*DB, error) {
 
 // Close closes a DB value being used with MongoDB.
 func (db *DB) Close() error {
-	return db.Database.Client().Disconnect(context.Background())
+	return db.database.Client().Disconnect(context.Background())
 }
 
 // Copy returns a new DB value for use with MongoDB based on master session.
@@ -83,7 +83,7 @@ func (db *DB) Execute(ctx context.Context, collName string, f func(*mongo.Collec
 		return errors.Wrap(ErrInvalidDBProvided, "db == nil")
 	}
 
-	return f(db.Database.Collection(collName))
+	return f(db.database.Collection(collName))
 }
 
 // ExecuteTimeout is used to execute MongoDB commands with a timeout.
@@ -97,7 +97,7 @@ func (db *DB) ExecuteTimeout(ctx context.Context, timeout time.Duration, collNam
 
 	// db.session.SetSocketTimeout(timeout)
 
-	return f(db.Database.Collection(collName))
+	return f(db.database.Collection(collName))
 }
 
 // StatusCheck validates the DB status good.
