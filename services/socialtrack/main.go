@@ -17,7 +17,7 @@ import (
 	"github.com/cvcio/elections-api/pkg/twitter"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/olivere/elastic"
-	"github.com/plagiari-sm/mediawatch/pkg/redis"
+	"github.com/cvcio/elections-api/pkg/redis"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/grpc"

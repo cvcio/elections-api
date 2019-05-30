@@ -11,9 +11,9 @@ import (
 	"github.com/plagiari-sm/mediawatch/pkg/db"
 	"github.com/plagiari-sm/mediawatch/pkg/mailer"
 
+	"github.com/cvcio/elections-api/pkg/redis"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/twitter"
-	"github.com/plagiari-sm/mediawatch/pkg/redis"
 	"gopkg.in/olahol/melody.v1"
 
 	proto "github.com/cvcio/elections-api/pkg/proto"

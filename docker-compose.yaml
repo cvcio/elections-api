@@ -20,6 +20,8 @@ services:
      - bootstrap.memory_lock=true
      - ES_JAVA_OPTS=-Xms512m -Xmx512m
      - network.host=0.0.0.0
+    volumes:
+      - data_elasticsearh:/usr/share/elasticsearch/data
     labels:
       - "traefik.frontend.rule=Host:elasticsearch.docker.localhost"
 
@@ -76,4 +78,4 @@ volumes:
   # data_neo4j:
   data_mongo:
   data_redis:
-  # data_elasticsearh:
+  data_elasticsearh:

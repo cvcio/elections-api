@@ -17,7 +17,7 @@ import (
 	"github.com/plagiari-sm/mediawatch/pkg/auth"
 	"github.com/plagiari-sm/mediawatch/pkg/db"
 	"github.com/plagiari-sm/mediawatch/pkg/mailer"
-	"github.com/plagiari-sm/mediawatch/pkg/redis"
+	"github.com/cvcio/elections-api/pkg/redis"
 	log "github.com/sirupsen/logrus"
 )
 
