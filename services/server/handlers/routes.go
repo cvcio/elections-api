@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"net/http"
 	"io"
+	"net/http"
 
 	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
@@ -11,10 +11,10 @@ import (
 	"github.com/cvcio/elections-api/pkg/middleware"
 	"github.com/olivere/elastic"
 
+	"github.com/cvcio/elections-api/pkg/redis"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/twitter"
 	"gopkg.in/olahol/melody.v1"
-	"github.com/cvcio/elections-api/pkg/redis"
 
 	proto "github.com/cvcio/elections-api/pkg/proto"
 	"github.com/gin-gonic/gin"
@@ -38,19 +38,19 @@ func Broadcast(stream proto.Twitter_StreamClient, m *melody.Melody) {
 }
 
 // API : Returns an new API
-func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.Authenticator, mail *mailer.Mailer, streamer *redis.Service/*proto.TwitterClient*/ ) http.Handler {
+func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.Authenticator, mail *mailer.Mailer, streamer *redis.Service /*proto.TwitterClient*/) http.Handler {
 	m := melody.New()
 	/*
-	session, err := streamer.Connect(context.Background(), &proto.Session{Id: primitive.NewObjectID().Hex(), Type: "api"})
-	if err != nil {
-		log.Debugf("Can't join streamer %s", err.Error())
-	}
+		session, err := streamer.Connect(context.Background(), &proto.Session{Id: primitive.NewObjectID().Hex(), Type: "api"})
+		if err != nil {
+			log.Debugf("Can't join streamer %s", err.Error())
+		}
 
-	// Connect to Stream
-	stream, err := streamer.Stream(context.Background())
-	if err != nil {
-		log.Debugf("Stream Connection Failed: %v", err)
-	}
+		// Connect to Stream
+		stream, err := streamer.Stream(context.Background())
+		if err != nil {
+			log.Debugf("Stream Connection Failed: %v", err)
+		}
 	*/
 	app := gin.Default()
 	app.RedirectTrailingSlash = true
@@ -112,13 +112,14 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 		public.POST("/users/verify", users.Verify)
 		public.POST("/users/2fa", users.SendPin)
 		public.POST("/users/token", users.Token)
+
+		public.GET("/annotate", annotations.GetRandom)
 		public.GET("/metrics/user/:id/volume", metrics.GetVolumeByUser)
 		public.GET("/metrics/user/:id/count", metrics.CountByUser)
 	}
 	private := app.Group("/v2")
 	{
 		private.Use(authmw.Authenticate())
-		private.GET("/annotate", annotations.GetRandom)
 		private.POST("/annotate", annotations.Create)
 	}
 	// Forbid Access
@@ -134,7 +135,7 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 		log.Fatal(err)
 	}
 
-	go func (tweets chan []byte,m *melody.Melody)  {
+	go func(tweets chan []byte, m *melody.Melody) {
 		for {
 			tweet := <-tweets
 			log.Info(string(tweet))
@@ -142,19 +143,19 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 		}
 	}(tweets, m)
 	/*
-	if session != nil {
-		go func(stream proto.Twitter_StreamClient, session *proto.Session) {
-			err := stream.Send(&proto.Message{Session: session})
-			if err == io.EOF {
+		if session != nil {
+			go func(stream proto.Twitter_StreamClient, session *proto.Session) {
+				err := stream.Send(&proto.Message{Session: session})
+				if err == io.EOF {
+					return
+				}
+				if err != nil {
+					log.Infof("proto.Twitter_StreamClient -> Error: %s", err.Error())
+				}
 				return
-			}
-			if err != nil {
-				log.Infof("proto.Twitter_StreamClient -> Error: %s", err.Error())
-			}
-			return
-		}(stream, session)
-		go Broadcast(stream, m)
-	}
+			}(stream, session)
+			go Broadcast(stream, m)
+		}
 	*/
 
 	return app

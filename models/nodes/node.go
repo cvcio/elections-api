@@ -26,6 +26,8 @@ type UserObj struct {
 	QuotedStatus    *UserObj            `json:"quoted_status,omitempty"`
 	RetweetedStatus *UserObj            `json:"retweeted_status,omitempty"`
 	Metrics         *proto.UserFeatures `json:"metrics"`
+	TweetIdStr      string              `json:"tweetIdStr"`
+	Text            string              `json:"text"`
 }
 
 // ESUserObj ...
@@ -47,4 +49,6 @@ type ESUserObj struct {
 	BannerImage     string  `json:"profile_banner_url"`
 	UserClass       string  `json:"user_class"`
 	UserClassScore  float64 `json:"user_class_score"`
+	TweetIdStr      string  `json:"tweetIdStr"`
+	Text            string  `json:"text"`
 }

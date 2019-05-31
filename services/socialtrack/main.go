@@ -216,6 +216,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 		FavouritesCount: t.User.FavouritesCount,
 		ProfileImage:    t.User.ProfileImageUrlHttps,
 		BannerImage:     t.User.ProfileBannerURL,
+		Text:            t.FullText,
+		TweetIdStr:      t.IdStr,
 	}
 
 	// Tweet User
@@ -243,6 +245,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 		BannerImage:     t.User.ProfileBannerURL,
 		UserClass:       user.UserClass,
 		UserClassScore:  user.UserClassScore,
+		Text:            t.FullText,
+		TweetIdStr:      t.IdStr,
 	})
 
 	// Quoted User
@@ -262,6 +266,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 			FavouritesCount: t.QuotedStatus.User.FavouritesCount,
 			ProfileImage:    t.QuotedStatus.User.ProfileImageUrlHttps,
 			BannerImage:     t.QuotedStatus.User.ProfileBannerURL,
+			Text:            t.QuotedStatus.FullText,
+			TweetIdStr:      t.QuotedStatus.IdStr,
 		}
 		quF = getUserFeatures(&t.QuotedStatus.User)
 		quC, _ = c.Classify(context.Background(), quF)
@@ -287,6 +293,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 			BannerImage:     t.QuotedStatus.User.ProfileBannerURL,
 			UserClass:       user.QuotedStatus.UserClass,
 			UserClassScore:  user.QuotedStatus.UserClassScore,
+			Text:            t.FullText,
+			TweetIdStr:      t.IdStr,
 		})
 	}
 	// Retweeted User
@@ -306,6 +314,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 			FavouritesCount: t.RetweetedStatus.User.FavouritesCount,
 			ProfileImage:    t.RetweetedStatus.User.ProfileImageUrlHttps,
 			BannerImage:     t.RetweetedStatus.User.ProfileBannerURL,
+			Text:            t.RetweetedStatus.FullText,
+			TweetIdStr:      t.RetweetedStatus.IdStr,
 		}
 		ruF = getUserFeatures(&t.RetweetedStatus.User)
 		ruC, _ = c.Classify(context.Background(), ruF)
@@ -331,6 +341,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 			BannerImage:     t.RetweetedStatus.User.ProfileBannerURL,
 			UserClass:       user.RetweetedStatus.UserClass,
 			UserClassScore:  user.RetweetedStatus.UserClassScore,
+			Text:            t.RetweetedStatus.FullText,
+			TweetIdStr:      t.RetweetedStatus.IdStr,
 		})
 	}
 	return user
