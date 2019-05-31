@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/cvcio/elections-api/models/user"
-	"github.com/plagiari-sm/mediawatch/pkg/auth"
+	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
+	"github.com/cvcio/elections-api/pkg/db"
+	"github.com/cvcio/elections-api/pkg/mailer"
 	"github.com/gin-gonic/gin"
 	gothic "github.com/markbates/goth/gothic"
-	"github.com/plagiari-sm/mediawatch/pkg/db"
-	"github.com/plagiari-sm/mediawatch/pkg/mailer"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -116,7 +116,7 @@ func (ctrl *Users) Update(c *gin.Context) {
 		return
 	}
 
-	err := user.Update(ctrl.db, u.IDStr, u)
+	_, err := user.Update(ctrl.db, u.IDStr, u)
 	if err != nil {
 		ResponseError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -153,7 +153,7 @@ func (ctrl *Users) Verify(c *gin.Context) {
 
 	u.Pin = ""
 	u.Status = "verify"
-	err = user.Update(ctrl.db, u.IDStr, u)
+	_, err = user.Update(ctrl.db, u.IDStr, u)
 	if err != nil {
 		ResponseError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -180,7 +180,7 @@ func (ctrl *Users) SendPin(c *gin.Context) {
 	}
 
 	u.Pin = user.RandStringBytes(8)
-	err = user.Update(ctrl.db, u.IDStr, u)
+	_, err = user.Update(ctrl.db, u.IDStr, u)
 	if err != nil {
 		ResponseError(c, http.StatusInternalServerError, err.Error())
 		return

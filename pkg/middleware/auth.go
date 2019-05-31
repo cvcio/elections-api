@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/plagiari-sm/mediawatch/pkg/auth"
+	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/go-chi/render"
 	"github.com/pkg/errors"
