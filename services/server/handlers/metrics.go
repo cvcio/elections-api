@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/cvcio/elections-api/pkg/config"
-	"github.com/cvcio/elections-api/pkg/db"
 	"github.com/gin-gonic/gin"
 	"github.com/olivere/elastic"
+	"github.com/plagiari-sm/mediawatch/pkg/db"
 	log "github.com/sirupsen/logrus"
 )
 

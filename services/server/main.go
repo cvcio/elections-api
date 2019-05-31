@@ -9,15 +9,15 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
-	"github.com/cvcio/elections-api/pkg/db"
 	"github.com/cvcio/elections-api/pkg/es"
-	"github.com/cvcio/elections-api/pkg/mailer"
-	"github.com/cvcio/elections-api/pkg/redis"
 	"github.com/cvcio/elections-api/services/server/handlers"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/plagiari-sm/mediawatch/pkg/auth"
+	"github.com/plagiari-sm/mediawatch/pkg/db"
+	"github.com/plagiari-sm/mediawatch/pkg/mailer"
+	"github.com/cvcio/elections-api/pkg/redis"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -102,11 +102,13 @@ func main() {
 
 	log.Debug("main: Created mail service")
 
-	// Que
-	pubsub := redis.New(&redis.NewInput{
-		RedisURL: cfg.Redis.Host,
-	})
-
+	log.Debug("main: Connecting to Redis")
+	// Queue setup
+	pubsub, err := redis.New(cfg.Redis.Host)
+	if err != nil {
+		log.Fatal("main: Register Redis Pub/Sub: %v", err.Error())
+	}
+	log.Debug("main: Connected to Redis")
 	/*
 		// Create the gRPC Service
 		// Parse Server Options

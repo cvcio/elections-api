@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cvcio/elections-api/pkg/auth"
-	"github.com/cvcio/elections-api/pkg/db"
 	"github.com/pkg/errors"
+	"github.com/plagiari-sm/mediawatch/pkg/auth"
+	"github.com/plagiari-sm/mediawatch/pkg/db"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -128,7 +128,7 @@ func Create(dbConn *db.DB, nu *User) (*User, error) {
 }
 
 // Update replaces a user document in the database.
-func Update(dbConn *db.DB, id string, upd *User) (*User, error) {
+func Update(dbConn *db.DB, id string, upd *User) error {
 	ctx, span := trace.StartSpan(context.Background(), "models.user.Update")
 	defer span.End()
 
@@ -138,7 +138,7 @@ func Update(dbConn *db.DB, id string, upd *User) (*User, error) {
 
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return nil, ErrInvalidID
+		return ErrInvalidID
 	}
 
 	/*
@@ -210,19 +210,28 @@ func Update(dbConn *db.DB, id string, upd *User) (*User, error) {
 
 	// If there's nothing to update we can quit early.
 	if len(fields) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	fields["updatedAt"] = now
 
 	update := bson.M{"$set": fields}
 	filter := bson.M{"_id": oid, "deleted": false} // bson.ObjectIdHex(id)}
-	res, err := dbConn.Database.Collection(usersCollection).UpdateOne(ctx, filter, update)
-	if err != nil {
-		if err == mongo.ErrNoDocuments { //ErrNotFound {
-			return nil, ErrNotFound
+
+	f := func(collection *mongo.Collection) error {
+		res, err := collection.UpdateOne(ctx, filter, update)
+		if res != nil {
+			fmt.Printf("%+v", res)
 		}
-		return nil, errors.Wrap(err, fmt.Sprintf("db.account.update(%s, %s)", db.Query(filter), db.Query(update)))
+		return err
+	}
+	if err := dbConn.Execute(ctx, usersCollection, f); err != nil {
+		if err != nil {
+			if err == mongo.ErrNoDocuments { //ErrNotFound {
+				return ErrNotFound
+			}
+			return errors.Wrap(err, fmt.Sprintf("db.account.update(%s, %s)", db.Query(filter), db.Query(update)))
+		}
 	}
 	/*
 		f := func(collection *mongo.Collection) (*mongo.UpdateResult, error) {
@@ -233,14 +242,14 @@ func Update(dbConn *db.DB, id string, upd *User) (*User, error) {
 		res, err := dbConn.Execute(ctx, usersCollection, f)
 		if err != nil {
 			if err == mongo.ErrNoDocuments { //ErrNotFound {
-				return nil, ErrNotFound
+				return ErrNotFound
 			}
-			return nil, errors.Wrap(err, fmt.Sprintf("db.account.update(%s, %s)", db.Query(filter), db.Query(update)))
+			return errors.Wrap(err, fmt.Sprintf("db.account.update(%s, %s)", db.Query(filter), db.Query(update)))
 		}
 	*/
-	fmt.Printf("%+v", res)
+	// fmt.Printf("%+v", res)
 
-	return nil, nil
+	return nil
 }
 
 // ByScreenNanme : Returns User by Twitter Screen Name

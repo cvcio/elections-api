@@ -14,10 +14,10 @@ import (
 	"github.com/cvcio/elections-api/pkg/config"
 	"github.com/cvcio/elections-api/pkg/es"
 	proto "github.com/cvcio/elections-api/pkg/proto"
-	"github.com/cvcio/elections-api/pkg/redis"
 	"github.com/cvcio/elections-api/pkg/twitter"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/olivere/elastic"
+	"github.com/cvcio/elections-api/pkg/redis"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/grpc"
@@ -54,9 +54,10 @@ func main() {
 	log.Info("main: Connected to Elasticsearch")
 
 	// Que
-	pubsub := redis.New(&redis.NewInput{
-		RedisURL: cfg.Redis.Host,
-	})
+	pubsub, err := redis.New(cfg.Redis.Host)
+	if err != nil {
+		log.Fatal("main: Register Redis Pub/Sub: %v", err.Error())
+	}
 
 	// Create the gRPC Service
 	// Parse Server Options
