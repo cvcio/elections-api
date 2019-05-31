@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/plagiari-sm/mediawatch/pkg/db"
+	"github.com/cvcio/elections-api/pkg/db"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"

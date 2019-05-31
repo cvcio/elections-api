@@ -1,20 +1,20 @@
 package handlers
 
 import (
-	"io"
 	"net/http"
+	"io"
 
+	"github.com/cvcio/elections-api/pkg/auth"
 	"github.com/cvcio/elections-api/pkg/config"
+	"github.com/cvcio/elections-api/pkg/db"
+	"github.com/cvcio/elections-api/pkg/mailer"
 	"github.com/cvcio/elections-api/pkg/middleware"
 	"github.com/olivere/elastic"
-	"github.com/plagiari-sm/mediawatch/pkg/auth"
-	"github.com/plagiari-sm/mediawatch/pkg/db"
-	"github.com/plagiari-sm/mediawatch/pkg/mailer"
 
-	"github.com/cvcio/elections-api/pkg/redis"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/twitter"
 	"gopkg.in/olahol/melody.v1"
+	"github.com/cvcio/elections-api/pkg/redis"
 
 	proto "github.com/cvcio/elections-api/pkg/proto"
 	"github.com/gin-gonic/gin"
@@ -38,19 +38,19 @@ func Broadcast(stream proto.Twitter_StreamClient, m *melody.Melody) {
 }
 
 // API : Returns an new API
-func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.Authenticator, mail *mailer.Mailer, streamer *redis.Service /*proto.TwitterClient*/) http.Handler {
+func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.Authenticator, mail *mailer.Mailer, streamer *redis.Service/*proto.TwitterClient*/ ) http.Handler {
 	m := melody.New()
 	/*
-		session, err := streamer.Connect(context.Background(), &proto.Session{Id: primitive.NewObjectID().Hex(), Type: "api"})
-		if err != nil {
-			log.Debugf("Can't join streamer %s", err.Error())
-		}
+	session, err := streamer.Connect(context.Background(), &proto.Session{Id: primitive.NewObjectID().Hex(), Type: "api"})
+	if err != nil {
+		log.Debugf("Can't join streamer %s", err.Error())
+	}
 
-		// Connect to Stream
-		stream, err := streamer.Stream(context.Background())
-		if err != nil {
-			log.Debugf("Stream Connection Failed: %v", err)
-		}
+	// Connect to Stream
+	stream, err := streamer.Stream(context.Background())
+	if err != nil {
+		log.Debugf("Stream Connection Failed: %v", err)
+	}
 	*/
 	app := gin.Default()
 	app.RedirectTrailingSlash = true
@@ -134,7 +134,7 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 		log.Fatal(err)
 	}
 
-	go func(tweets chan []byte, m *melody.Melody) {
+	go func (tweets chan []byte,m *melody.Melody)  {
 		for {
 			tweet := <-tweets
 			log.Info(string(tweet))
@@ -142,19 +142,19 @@ func API(cfg *config.Config, db *db.DB, es *elastic.Client, authenticator *auth.
 		}
 	}(tweets, m)
 	/*
-		if session != nil {
-			go func(stream proto.Twitter_StreamClient, session *proto.Session) {
-				err := stream.Send(&proto.Message{Session: session})
-				if err == io.EOF {
-					return
-				}
-				if err != nil {
-					log.Infof("proto.Twitter_StreamClient -> Error: %s", err.Error())
-				}
+	if session != nil {
+		go func(stream proto.Twitter_StreamClient, session *proto.Session) {
+			err := stream.Send(&proto.Message{Session: session})
+			if err == io.EOF {
 				return
-			}(stream, session)
-			go Broadcast(stream, m)
-		}
+			}
+			if err != nil {
+				log.Infof("proto.Twitter_StreamClient -> Error: %s", err.Error())
+			}
+			return
+		}(stream, session)
+		go Broadcast(stream, m)
+	}
 	*/
 
 	return app
