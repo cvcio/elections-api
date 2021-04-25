@@ -77,8 +77,14 @@ func (ctrl *Annotations) GetRandom(c *gin.Context) {
 		if err != nil {
 			ResponseError(c, 500, err.Error())
 		}
+
+		text := tweet.FullText
+		if tweet.RetweetedStatus != nil {
+			text = tweet.RetweetedStatus.FullText
+		}
+
 		response := &T{
-			Text:      tweet.FullText,
+			Text:      text,
 			CreatedAt: tweet.CreatedAt,
 		}
 		for u := range tweet.Entities.Urls {

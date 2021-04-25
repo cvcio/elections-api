@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,6 +25,28 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/grpc"
 )
+
+func getFollow(path string) []string {
+	var i int
+	c, _ := os.Open(path)
+	n := csv.NewReader(bufio.NewReader(c))
+	var str []string
+	for {
+		line, error := n.Read()
+		if error == io.EOF {
+			break
+		} else if error != nil {
+			log.Fatal(error)
+		}
+		if i > 0 {
+			idStr := line[1]
+			// str += idStr + ", "
+			str = append(str, idStr)
+		}
+		i++
+	}
+	return str
+}
 
 func main() {
 	// ========================================
@@ -62,28 +87,6 @@ func main() {
 	// Parse Server Options
 	var grpcOptions []grpc.DialOption
 	grpcOptions = append(grpcOptions, grpc.WithInsecure())
-	/*
-		// Create gRPC Streamer Connection
-		grpcStreamerConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Streamer.Host, cfg.Streamer.Port), grpcOptions...)
-		if err != nil {
-			log.Debugf("main: GRPC Streamer did not connect: %v", err)
-		}
-
-		defer grpcStreamerConnection.Close()
-		// Create gRPC Streamer Client
-		streamer := proto.NewTwitterClient(grpcStreamerConnection)
-
-		session, err := streamer.Connect(context.Background(), &proto.Session{Id: primitive.NewObjectID().Hex(), Type: "listener"})
-		if err != nil {
-			log.Debugf("Can't join streamer %s", err.Error())
-		}
-
-		// Connect to Stream
-		stream, err := streamer.Stream(context.Background())
-		if err != nil {
-			log.Debugf("Stream Connection Failed: %v", err)
-		}
-	*/
 
 	// Create gRPC Classification Connection
 	grpcClassificationConnection, err := grpc.Dial(fmt.Sprintf("%s:%s", cfg.Classification.Host, cfg.Classification.Port), grpcOptions...)
@@ -112,14 +115,14 @@ func main() {
 	tweetChan := make(chan anaconda.Tweet)
 
 	// start Listening the twitter stream
-	var ids []string
-	for _, username := range cfg.Streamer.Follow {
-		if u := svc.GetUsersShow(username); u != nil {
-			ids = append(ids, u.IdStr)
-		}
+
+	var followIds []string
+	if cfg.Streamer.Follow != "" {
+		followIds = getFollow(cfg.Streamer.Follow)
 	}
-	log.Infof("LISTENING %s %s", cfg.Streamer.Follow, cfg.Streamer.Track)
-	go svc.Listen(ids, cfg.Streamer.Track, tweetChan)
+
+	log.Infof("LISTENING %s %s", followIds, cfg.Streamer.Track)
+	go svc.Listen(followIds, cfg.Streamer.Track, tweetChan)
 
 	// ========================================
 	// Shutdown
@@ -213,6 +216,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 		FavouritesCount: t.User.FavouritesCount,
 		ProfileImage:    t.User.ProfileImageUrlHttps,
 		BannerImage:     t.User.ProfileBannerURL,
+		Text:            t.FullText,
+		TweetIdStr:      t.IdStr,
 	}
 
 	// Tweet User
@@ -240,6 +245,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 		BannerImage:     t.User.ProfileBannerURL,
 		UserClass:       user.UserClass,
 		UserClassScore:  user.UserClassScore,
+		Text:            t.FullText,
+		TweetIdStr:      t.IdStr,
 	})
 
 	// Quoted User
@@ -259,6 +266,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 			FavouritesCount: t.QuotedStatus.User.FavouritesCount,
 			ProfileImage:    t.QuotedStatus.User.ProfileImageUrlHttps,
 			BannerImage:     t.QuotedStatus.User.ProfileBannerURL,
+			Text:            t.QuotedStatus.FullText,
+			TweetIdStr:      t.QuotedStatus.IdStr,
 		}
 		quF = getUserFeatures(&t.QuotedStatus.User)
 		quC, _ = c.Classify(context.Background(), quF)
@@ -284,6 +293,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 			BannerImage:     t.QuotedStatus.User.ProfileBannerURL,
 			UserClass:       user.QuotedStatus.UserClass,
 			UserClassScore:  user.QuotedStatus.UserClassScore,
+			Text:            t.FullText,
+			TweetIdStr:      t.IdStr,
 		})
 	}
 	// Retweeted User
@@ -303,6 +314,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 			FavouritesCount: t.RetweetedStatus.User.FavouritesCount,
 			ProfileImage:    t.RetweetedStatus.User.ProfileImageUrlHttps,
 			BannerImage:     t.RetweetedStatus.User.ProfileBannerURL,
+			Text:            t.RetweetedStatus.FullText,
+			TweetIdStr:      t.RetweetedStatus.IdStr,
 		}
 		ruF = getUserFeatures(&t.RetweetedStatus.User)
 		ruC, _ = c.Classify(context.Background(), ruF)
@@ -328,6 +341,8 @@ func classifyNestedTweet(esClient *elastic.Client, t *anaconda.Tweet, c proto.Cl
 			BannerImage:     t.RetweetedStatus.User.ProfileBannerURL,
 			UserClass:       user.RetweetedStatus.UserClass,
 			UserClassScore:  user.RetweetedStatus.UserClassScore,
+			Text:            t.RetweetedStatus.FullText,
+			TweetIdStr:      t.RetweetedStatus.IdStr,
 		})
 	}
 	return user

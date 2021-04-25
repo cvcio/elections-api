@@ -25,7 +25,7 @@ func New(smtp string, port int, username, password string, From, FromName, Reply
 	return m
 }
 
-func message(ctx context.Context, m *Mailer, To, subject, body string) error {
+func Message(ctx context.Context, m *Mailer, To, subject, body string) error {
 	gm := gomail.NewMessage()
 	// gm.SetAddressHeader("Cc", "","")
 	gm.SetAddressHeader("From", m.From, m.FromName)
@@ -39,25 +39,25 @@ func message(ctx context.Context, m *Mailer, To, subject, body string) error {
 
 func MessageSimple(ctx context.Context, m *Mailer, To, subject, body string) error {
 	msgBody := fmt.Sprintf(msgDefault, body)
-	return message(ctx, m, To, subject, msgBody)
+	return Message(ctx, m, To, subject, msgBody)
 }
 
 func SendInvite(ctx context.Context, m *Mailer, To, First, Last, email string) error {
 	msgBody := fmt.Sprintf(msgInvitation, First, Last, email)
-	return message(ctx, m, To, fmt.Sprintf("Join MediaWatch (Invitation by \"%s\")", First), msgBody)
+	return Message(ctx, m, To, fmt.Sprintf("Join MediaWatch (Invitation by \"%s\")", First), msgBody)
 }
 
 func SendNewPass(ctx context.Context, m *Mailer, To, First, pass string) error {
 	msgBody := fmt.Sprintf(msgNewPass, First, To)
-	return message(ctx, m, To, "Password Reset", msgBody)
+	return Message(ctx, m, To, "Password Reset", msgBody)
 }
 
 func SendReset(ctx context.Context, m *Mailer, To, First, pin, id string) error {
 	msgBody := fmt.Sprintf(msgReset, First, pin, id, id)
-	return message(ctx, m, To, "Your Verification Code", msgBody)
+	return Message(ctx, m, To, "Your Verification Code", msgBody)
 }
 
 func SendPin(ctx context.Context, m *Mailer, To, First, pin, id string) error {
 	msgBody := fmt.Sprintf(msgPin, First, pin, id, id)
-	return message(ctx, m, To, "Your Verification Code", msgBody)
+	return Message(ctx, m, To, "Your Verification Code", msgBody)
 }
